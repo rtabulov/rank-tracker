@@ -1,15 +1,63 @@
+import {
+  Outlet,
+  RouterProvider,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  type AnyRouter,
+  type RouterHistory,
+} from "@tanstack/react-router";
 import { ModeToggle } from "@/components/mode-toggle";
 import { ThemeProvider } from "@/components/theme-provider";
 
-export function App() {
+const rootRoute = createRootRoute({
+  component: RootLayout,
+});
+
+const indexRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/",
+  component: HomePage,
+});
+
+const routeTree = rootRoute.addChildren([indexRoute]);
+
+export const PAGES_BASEPATH = "/rank-tracker";
+
+export function createAppRouter(options?: { history?: RouterHistory }) {
+  return createRouter({
+    routeTree,
+    basepath: PAGES_BASEPATH,
+    history: options?.history,
+  });
+}
+
+const defaultRouter = createAppRouter();
+
+declare module "@tanstack/react-router" {
+  interface Register {
+    router: typeof defaultRouter;
+  }
+}
+
+function RootLayout() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
-      <main className="flex min-h-svh flex-col gap-4 p-6">
-        <header className="flex items-center justify-between gap-4">
+      <div className="flex min-h-svh flex-col">
+        <header className="flex items-center justify-between gap-4 p-6">
           <h1 className="text-2xl font-medium tracking-tight">Rank Tracker</h1>
           <ModeToggle />
         </header>
-      </main>
+        <Outlet />
+      </div>
     </ThemeProvider>
   );
+}
+
+function HomePage() {
+  return <main className="flex-1 px-6 pb-6" />;
+}
+
+export function App({ router = defaultRouter }: { router?: AnyRouter }) {
+  return <RouterProvider router={router} />;
 }

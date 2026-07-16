@@ -41,6 +41,8 @@ Object.defineProperty(window, "matchMedia", {
   }),
 });
 
+window.scrollTo = () => {};
+
 afterEach(() => {
   cleanup();
 });

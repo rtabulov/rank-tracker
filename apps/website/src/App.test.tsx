@@ -1,16 +1,26 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { createMemoryHistory } from "@tanstack/react-router";
 import { expect, test } from "vite-plus/test";
-import { App } from "./App.tsx";
+import { App, createAppRouter } from "./App.tsx";
 
-test("shell renders", () => {
-  render(<App />);
-  expect(screen.getByRole("heading", { name: "Rank Tracker" })).toBeInTheDocument();
+test("composed tree renders the home shell via the router under the base path", async () => {
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(<App router={router} />);
+
+  expect(await screen.findByRole("heading", { name: "Rank Tracker" })).toBeInTheDocument();
 });
 
 test("toggling theme updates effective light/dark on the document", async () => {
   const user = userEvent.setup();
-  render(<App />);
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(<App router={router} />);
+
+  expect(await screen.findByRole("heading", { name: "Rank Tracker" })).toBeInTheDocument();
 
   await user.click(screen.getByRole("button", { name: /toggle theme/i }));
   await user.click(screen.getByRole("menuitem", { name: /^dark$/i }));
