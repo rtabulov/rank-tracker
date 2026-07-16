@@ -28,3 +28,8 @@ Defaults: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `w
 ### Domain docs
 
 Single-context: root `CONTEXT.md` + `docs/adr/`. See `docs/agents/domain.md`.
+
+### Scaffold conventions
+
+- TDD default (Vitest + RTL, no coverage gate): `docs/agents/tdd.md`
+- Client state (URL → Context ≫ global stores): `docs/agents/client-state.md`
