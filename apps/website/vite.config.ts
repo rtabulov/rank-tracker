@@ -1,6 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig, lazyPlugins } from "vite-plus";
+import { websitePwaOptions } from "./src/pwa-options.ts";
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -10,7 +11,13 @@ export default defineConfig({
     const { default: react, reactCompilerPreset } = await import("@vitejs/plugin-react");
     const { default: babel } = await import("@rolldown/plugin-babel");
     const { default: tailwindcss } = await import("@tailwindcss/vite");
-    return [react(), babel({ presets: [reactCompilerPreset()] }), tailwindcss()];
+    const { VitePWA } = await import("vite-plugin-pwa");
+    return [
+      react(),
+      babel({ presets: [reactCompilerPreset()] }),
+      tailwindcss(),
+      ...VitePWA(websitePwaOptions),
+    ];
   }),
   resolve: {
     alias: {
