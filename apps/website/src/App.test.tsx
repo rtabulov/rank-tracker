@@ -31,3 +31,18 @@ test("toggling theme updates effective light/dark on the document", async () => 
   expect(document.documentElement).toHaveClass("light");
   expect(document.documentElement).not.toHaveClass("dark");
 });
+
+test("invalid form input surfaces a visible validation error", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(<App router={router} />);
+
+  expect(await screen.findByRole("heading", { name: "Rank Tracker" })).toBeInTheDocument();
+
+  await user.type(screen.getByLabelText(/^name$/i), "a");
+  await user.click(screen.getByRole("button", { name: /^submit$/i }));
+
+  expect(await screen.findByText("Name must be at least 2 characters")).toBeInTheDocument();
+});

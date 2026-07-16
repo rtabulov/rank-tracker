@@ -8,6 +8,8 @@ catalogMode: prefer
 catalog:
   "@fontsource-variable/geist": ^5.2.9
   "@tailwindcss/vite": ^4.3.2
+  "@tanstack/react-form": ^1.33.2
+  "@tanstack/react-query": ^5.101.2
   "@tanstack/react-router": ^1.170.18
   "@testing-library/user-event": ^14.6.1
   "@types/node": ^24.13.3
@@ -22,6 +24,7 @@ catalog:
   typescript: rc
   vite: npm:@voidzero-dev/vite-plus-core@0.2.4
   vite-plus: 0.2.4
+  zod: ^4.4.3
 overrides:
   vite: "catalog:"
 peerDependencyRules:

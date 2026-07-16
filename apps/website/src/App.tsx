@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
   RouterProvider,
@@ -7,6 +9,7 @@ import {
   type AnyRouter,
   type RouterHistory,
 } from "@tanstack/react-router";
+import { ExampleNameForm } from "@/components/example-name-form";
 import { ModeToggle } from "@/components/mode-toggle";
 import { ThemeProvider } from "@/components/theme-provider";
 
@@ -55,9 +58,19 @@ function RootLayout() {
 }
 
 function HomePage() {
-  return <main className="flex-1 px-6 pb-6" />;
+  return (
+    <main className="flex flex-1 flex-col gap-4 px-6 pb-6">
+      <ExampleNameForm />
+    </main>
+  );
 }
 
 export function App({ router = defaultRouter }: { router?: AnyRouter }) {
-  return <RouterProvider router={router} />;
+  const [queryClient] = useState(() => new QueryClient());
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
+  );
 }
