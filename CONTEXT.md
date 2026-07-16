@@ -33,12 +33,12 @@ The on-device persistence holding the player's Entries and related v1 data.
 _Avoid_: Database, vault, profile, save file, account
 
 **Export**:
-Producing a JSON file from the Local store for backup or transfer.
+A JSON file that is a full dump of the Local store (same document shape) for backup or transfer.
 _Avoid_: Backup, sync, download, save
 
 **Import**:
-Restoring data into the Local store from an Export JSON file.
-_Avoid_: Restore, sync, upload, load
+Replacing the Local store from an Export JSON file (or failing with the store unchanged).
+_Avoid_: Restore, sync, upload, load, merge
 
 **Player**:
 The person whose Rank Score history this Local store represents.
