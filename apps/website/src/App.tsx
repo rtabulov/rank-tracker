@@ -12,6 +12,10 @@ import {
 import { ExampleNameForm } from "@/components/example-name-form";
 import { ModeToggle } from "@/components/mode-toggle";
 import { ThemeProvider } from "@/components/theme-provider";
+import {
+  SeasonViewPrototype,
+  parseSeasonViewSearch,
+} from "@/prototype/season-view/SeasonViewPrototype";
 
 const rootRoute = createRootRoute({
   component: RootLayout,
@@ -23,7 +27,15 @@ const indexRoute = createRoute({
   component: HomePage,
 });
 
-const routeTree = rootRoute.addChildren([indexRoute]);
+/** Throwaway Season view layout prototype — see issue "What does the main screen look like?" */
+const seasonViewPrototypeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/prototype/season-view",
+  validateSearch: parseSeasonViewSearch,
+  component: SeasonViewPrototype,
+});
+
+const routeTree = rootRoute.addChildren([indexRoute, seasonViewPrototypeRoute]);
 
 export const PAGES_BASEPATH = "/rank-tracker";
 
