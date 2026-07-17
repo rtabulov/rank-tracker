@@ -16,6 +16,45 @@ test("composed tree renders the home shell via the router under the base path", 
   expect(await screen.findByRole("heading", { name: "Rank Tracker" })).toBeInTheDocument();
 });
 
+test("D hotkey cycles explicit light and dark on the document", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
+
+  expect(await screen.findByRole("heading", { name: "Rank Tracker" })).toBeInTheDocument();
+
+  await user.click(screen.getByRole("button", { name: /toggle theme/i }));
+  await user.click(screen.getByRole("menuitem", { name: /^dark$/i }));
+  expect(document.documentElement).toHaveClass("dark");
+
+  await user.keyboard("{d}");
+  expect(document.documentElement).toHaveClass("light");
+  expect(document.documentElement).not.toHaveClass("dark");
+
+  await user.keyboard("{d}");
+  expect(document.documentElement).toHaveClass("dark");
+  expect(document.documentElement).not.toHaveClass("light");
+});
+
+test("D hotkey from system theme sets an explicit light or dark theme", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
+
+  expect(await screen.findByRole("heading", { name: "Rank Tracker" })).toBeInTheDocument();
+  expect(document.documentElement).toHaveClass("light");
+  expect(document.documentElement).not.toHaveClass("dark");
+
+  await user.keyboard("{d}");
+  expect(document.documentElement).toHaveClass("dark");
+  expect(document.documentElement).not.toHaveClass("light");
+  expect(window.localStorage.getItem("vite-ui-theme")).toBe("dark");
+});
+
 test("toggling theme updates effective light/dark on the document", async () => {
   const user = userEvent.setup();
   const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });

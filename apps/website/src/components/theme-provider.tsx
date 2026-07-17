@@ -2,6 +2,15 @@ import { createContext, useContext, useEffect, useState } from "react";
 
 type Theme = "dark" | "light" | "system";
 
+export function cycleExplicitTheme(
+  theme: Theme,
+  effectiveTheme: "light" | "dark",
+): "light" | "dark" {
+  if (theme === "light") return "dark";
+  if (theme === "dark") return "light";
+  return effectiveTheme === "dark" ? "light" : "dark";
+}
+
 type ThemeProviderProps = {
   children: React.ReactNode;
   defaultTheme?: Theme;
