@@ -1,6 +1,6 @@
-import { Button } from "@/components/ui/button.tsx";
-import { useLocalStore } from "@/components/local-store-provider.tsx";
-import { getCurrentSeason, getEntriesForSeason, getSeasonByNumber } from "@/lib/seasons.ts";
+import { useLocalStore } from "@/components/local-store-provider";
+import { Button } from "@/components/ui/button";
+import { getCurrentSeason, getEntriesForSeason, getSeasonByNumber } from "@/lib/seasons";
 
 type SeasonViewProps = {
   seasonNumber: number;

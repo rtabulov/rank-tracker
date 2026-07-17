@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { createMemoryHistory } from "@tanstack/react-router";
 import { expect, test } from "vite-plus/test";
 import { App, createAppRouter } from "./App.tsx";
-import { createMemoryStorageAdapter } from "./lib/local-store.ts";
+import { createMemoryStorageAdapter } from "./lib/local-store";
 
 const CURRENT_SEASON_NUMBER = 11;
 
@@ -62,6 +62,20 @@ test("selected Season is represented in the URL", async () => {
 
   await screen.findByRole("heading", { name: /season 11 \(current\)/i });
 
+  expect(history.location.search).toContain(`season=${CURRENT_SEASON_NUMBER}`);
+});
+
+test("season search param from the URL selects that Season", async () => {
+  const history = createMemoryHistory({
+    initialEntries: [`/rank-tracker/?season=${CURRENT_SEASON_NUMBER}`],
+  });
+  const router = createAppRouter({ history });
+
+  render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
+
+  expect(
+    await screen.findByRole("heading", { name: /season 11 \(current\)/i }),
+  ).toBeInTheDocument();
   expect(history.location.search).toContain(`season=${CURRENT_SEASON_NUMBER}`);
 });
 

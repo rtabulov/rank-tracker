@@ -1,12 +1,11 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 import {
   LOCAL_STORE_KEY,
   createLocalStorageAdapter,
   loadLocalStore,
   saveLocalStore,
-  type createMemoryStorageAdapter,
-} from "@/lib/local-store.ts";
-import type { LocalStore, StorageAdapter } from "@/lib/types.ts";
+} from "@/lib/local-store";
+import type { LocalStore, StorageAdapter } from "@/lib/types";
 
 type LocalStoreContextValue = {
   store: LocalStore;
@@ -33,17 +32,14 @@ export function LocalStoreProvider({
     return loaded;
   });
 
-  const value = useMemo(
-    () => ({
-      store,
-      setStore: (next: LocalStore) => {
-        setStoreState(next);
-        saveLocalStore(storageAdapter, next);
-      },
-      storageAdapter,
-    }),
-    [store, storageAdapter],
-  );
+  const value = {
+    store,
+    setStore: (next: LocalStore) => {
+      setStoreState(next);
+      saveLocalStore(storageAdapter, next);
+    },
+    storageAdapter,
+  };
 
   return <LocalStoreContext.Provider value={value}>{children}</LocalStoreContext.Provider>;
 }
@@ -55,5 +51,3 @@ export function useLocalStore(): LocalStoreContextValue {
   }
   return context;
 }
-
-export type TestStorageAdapter = ReturnType<typeof createMemoryStorageAdapter>;

@@ -1,5 +1,4 @@
-import { useEffect } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
@@ -12,12 +11,12 @@ import {
   type AnyRouter,
   type RouterHistory,
 } from "@tanstack/react-router";
-import { LocalStoreProvider } from "@/components/local-store-provider.tsx";
-import { ModeToggle } from "@/components/mode-toggle.tsx";
-import { SeasonView } from "@/components/season-view.tsx";
-import { ThemeProvider } from "@/components/theme-provider.tsx";
-import { getCurrentSeason } from "@/lib/seasons.ts";
-import type { LocalStore, StorageAdapter } from "@/lib/types.ts";
+import { LocalStoreProvider } from "@/components/local-store-provider";
+import { ModeToggle } from "@/components/mode-toggle";
+import { SeasonView } from "@/components/season-view";
+import { ThemeProvider } from "@/components/theme-provider";
+import { getCurrentSeason } from "@/lib/seasons";
+import type { LocalStore, StorageAdapter } from "@/lib/types";
 
 type SeasonSearch = {
   season?: number;
@@ -32,9 +31,13 @@ const indexRoute = createRoute({
   path: "/",
   validateSearch: (search: Record<string, unknown>): SeasonSearch => {
     const season = search.season;
-    return {
-      season: typeof season === "number" ? season : undefined,
-    };
+    if (typeof season === "number" && Number.isInteger(season)) {
+      return { season };
+    }
+    if (typeof season === "string" && /^\d+$/.test(season)) {
+      return { season: Number(season) };
+    }
+    return {};
   },
   component: SeasonViewPage,
 });
