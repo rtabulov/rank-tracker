@@ -6,8 +6,8 @@ import { LogRsOverlay } from "@/components/log-rs-overlay";
 import { RsSparkline } from "@/components/rs-sparkline";
 import { Button } from "@/components/ui/button";
 import { addEntry, deleteEntry, updateEntry } from "@/lib/entries";
-import type { Entry } from "@/lib/types";
 import { formatLocalWhen, formatSigned } from "@/lib/format";
+import type { Entry } from "@/lib/types";
 import { computeSeasonSummary } from "@/lib/season-summary";
 import { getCurrentSeason, getEntriesForSeason, getSeasonByNumber } from "@/lib/seasons";
 

@@ -1,22 +1,12 @@
 import { useForm } from "@tanstack/react-form";
 import { useEffect } from "react";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { ViewportOverlay } from "@/components/viewport-overlay";
 import { createEntry } from "@/lib/entries";
+import { entryRsFormSchema } from "@/lib/entry-form-schema";
 import { fromDatetimeLocalValue, toDatetimeLocalValue } from "@/lib/format";
 import { getSeasonForTimestamp } from "@/lib/seasons";
 import type { Entry } from "@/lib/types";
-
-const editEntrySchema = z.object({
-  rs: z
-    .string()
-    .trim()
-    .min(1, "RS is required")
-    .refine((value) => /^\d+$/.test(value), "RS must be a whole number")
-    .refine((value) => Number(value) >= 0, "RS must be 0 or greater"),
-  recordedAtLocal: z.string().min(1, "Recorded at is required"),
-});
 
 type EditEntryOverlayProps = {
   open: boolean;
@@ -41,7 +31,7 @@ export function EditEntryOverlay({
       recordedAtLocal: toDatetimeLocalValue(new Date(entry.recordedAt)),
     },
     validators: {
-      onSubmit: editEntrySchema,
+      onSubmit: entryRsFormSchema,
     },
     onSubmit: async ({ value }) => {
       const recordedAt = fromDatetimeLocalValue(value.recordedAtLocal);
