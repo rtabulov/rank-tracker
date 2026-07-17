@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { useLocalStore } from "@/components/local-store-provider";
+import { DeleteEntryOverlay } from "@/components/delete-entry-overlay";
+import { EditEntryOverlay } from "@/components/edit-entry-overlay";
 import { LogRsOverlay } from "@/components/log-rs-overlay";
 import { RsSparkline } from "@/components/rs-sparkline";
 import { Button } from "@/components/ui/button";
-import { addEntry } from "@/lib/entries";
+import { addEntry, deleteEntry, updateEntry } from "@/lib/entries";
+import type { Entry } from "@/lib/types";
 import { formatLocalWhen, formatSigned } from "@/lib/format";
 import { computeSeasonSummary } from "@/lib/season-summary";
 import { getCurrentSeason, getEntriesForSeason, getSeasonByNumber } from "@/lib/seasons";
@@ -15,6 +18,8 @@ type SeasonViewProps = {
 export function SeasonView({ seasonNumber }: SeasonViewProps) {
   const { store, setStore } = useLocalStore();
   const [logRsOpen, setLogRsOpen] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<Entry | null>(null);
+  const [deletingEntry, setDeletingEntry] = useState<Entry | null>(null);
   const season = getSeasonByNumber(seasonNumber) ?? getCurrentSeason();
   const entries = getEntriesForSeason(store.entries, season.number);
   const isEmpty = entries.length === 0;
@@ -110,8 +115,30 @@ export function SeasonView({ seasonNumber }: SeasonViewProps) {
         ) : (
           <ul className="flex flex-col gap-2">
             {entries.map((entry) => (
-              <li key={entry.id}>
-                RS {entry.rs.toLocaleString()} · {formatLocalWhen(entry.recordedAt)}
+              <li key={entry.id} className="flex items-center justify-between gap-2">
+                <span>
+                  RS {entry.rs.toLocaleString()} · {formatLocalWhen(entry.recordedAt)}
+                </span>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    aria-label={`Edit ${entry.id}`}
+                    onClick={() => setEditingEntry(entry)}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    aria-label={`Delete ${entry.id}`}
+                    onClick={() => setDeletingEntry(entry)}
+                  >
+                    Delete
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>
@@ -130,6 +157,34 @@ export function SeasonView({ seasonNumber }: SeasonViewProps) {
           setStore({ ...store, entries: addEntry(store.entries, entry) });
         }}
       />
+
+      {editingEntry !== null && deletingEntry === null && (
+        <EditEntryOverlay
+          open
+          entry={editingEntry}
+          seasonNumber={season.number}
+          onClose={() => setEditingEntry(null)}
+          onSaved={(entry) => {
+            setStore({ ...store, entries: updateEntry(store.entries, entry.id, entry) });
+          }}
+          onDeleteRequest={() => {
+            setDeletingEntry(editingEntry);
+            setEditingEntry(null);
+          }}
+        />
+      )}
+
+      {deletingEntry !== null && (
+        <DeleteEntryOverlay
+          open
+          entry={deletingEntry}
+          onClose={() => setDeletingEntry(null)}
+          onConfirm={() => {
+            setStore({ ...store, entries: deleteEntry(store.entries, deletingEntry.id) });
+            setDeletingEntry(null);
+          }}
+        />
+      )}
     </main>
   );
 }

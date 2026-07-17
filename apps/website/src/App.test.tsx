@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryHistory } from "@tanstack/react-router";
 import { expect, test } from "vite-plus/test";
@@ -236,6 +236,203 @@ test("Log RS overlay uses drawer chrome on narrow viewports", async () => {
     "data-overlay-variant",
     "drawer",
   );
+});
+
+test("Edit on an Entry row opens Edit overlay with editable rs and recordedAt", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      initialStore={{
+        version: 1,
+        entries: [
+          {
+            id: "entry-edit-1",
+            rs: 42000,
+            recordedAt: "2026-07-15T10:00:00.000Z",
+          },
+        ],
+      }}
+    />,
+  );
+
+  await user.click(await screen.findByRole("button", { name: "Edit entry-edit-1" }));
+
+  expect(await screen.findByRole("dialog", { name: "Edit Entry" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Delete" })).toBeInTheDocument();
+  expect(screen.getByLabelText(/^rs$/i)).toHaveValue("42000");
+  expect(screen.getByLabelText(/^recorded at$/i)).toBeInTheDocument();
+});
+
+test("saving Edit Entry persists changes with stable id", async () => {
+  const user = userEvent.setup();
+  const storageAdapter = createMemoryStorageAdapter();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={storageAdapter}
+      initialStore={{
+        version: 1,
+        entries: [
+          {
+            id: "entry-edit-1",
+            rs: 42000,
+            recordedAt: "2026-07-15T10:00:00.000Z",
+          },
+        ],
+      }}
+    />,
+  );
+
+  await user.click(await screen.findByRole("button", { name: "Edit entry-edit-1" }));
+  await user.clear(screen.getByLabelText(/^rs$/i));
+  await user.type(screen.getByLabelText(/^rs$/i), "45000");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+
+  expect(await screen.findByLabelText("Season hero")).toHaveTextContent("45,000");
+  expect(screen.queryByRole("dialog", { name: "Edit Entry" })).not.toBeInTheDocument();
+
+  const raw = storageAdapter.getItem("rank-tracker-local-store");
+  const store = JSON.parse(raw!) as {
+    version: number;
+    entries: Array<{ id: string; rs: number; recordedAt: string }>;
+  };
+  expect(store.entries).toHaveLength(1);
+  expect(store.entries[0]?.id).toBe("entry-edit-1");
+  expect(store.entries[0]?.rs).toBe(45000);
+});
+
+test("Delete confirm from Entry row hard-deletes and refreshes Season view", async () => {
+  const user = userEvent.setup();
+  const storageAdapter = createMemoryStorageAdapter();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={storageAdapter}
+      initialStore={{
+        version: 1,
+        entries: [
+          {
+            id: "entry-a",
+            rs: 42000,
+            recordedAt: "2026-07-15T10:00:00.000Z",
+          },
+          {
+            id: "entry-b",
+            rs: 43000,
+            recordedAt: "2026-07-16T10:00:00.000Z",
+          },
+        ],
+      }}
+    />,
+  );
+
+  await user.click(await screen.findByRole("button", { name: "Delete entry-a" }));
+
+  const dialog = await screen.findByRole("dialog", { name: "Delete Entry" });
+  expect(within(dialog).getByText(/RS 42,000/i)).toBeInTheDocument();
+  expect(within(dialog).getByRole("button", { name: "Delete" })).toBeInTheDocument();
+
+  await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+  expect(screen.queryByRole("dialog", { name: "Delete Entry" })).not.toBeInTheDocument();
+  expect(screen.queryByText(/RS 42,000/i)).not.toBeInTheDocument();
+  expect(screen.getByText(/RS 43,000/i)).toBeInTheDocument();
+
+  const raw = storageAdapter.getItem("rank-tracker-local-store");
+  const store = JSON.parse(raw!) as {
+    entries: Array<{ id: string }>;
+  };
+  expect(store.entries).toHaveLength(1);
+  expect(store.entries[0]?.id).toBe("entry-b");
+});
+
+test("Delete from Edit replaces Edit overlay and dismiss returns to Season view", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      initialStore={{
+        version: 1,
+        entries: [
+          {
+            id: "entry-edit-1",
+            rs: 42000,
+            recordedAt: "2026-07-15T10:00:00.000Z",
+          },
+        ],
+      }}
+    />,
+  );
+
+  await user.click(await screen.findByRole("button", { name: "Edit entry-edit-1" }));
+  expect(await screen.findByRole("dialog", { name: "Edit Entry" })).toBeInTheDocument();
+
+  await user.click(screen.getByRole("button", { name: "Delete" }));
+
+  expect(screen.queryByRole("dialog", { name: "Edit Entry" })).not.toBeInTheDocument();
+  const dialog = await screen.findByRole("dialog", { name: "Delete Entry" });
+  expect(dialog).toBeInTheDocument();
+
+  await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+
+  expect(screen.queryByRole("dialog", { name: "Delete Entry" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("dialog", { name: "Edit Entry" })).not.toBeInTheDocument();
+  expect(screen.getByLabelText("Season hero")).toHaveTextContent("42,000");
+});
+
+test("deleting the last Entry on Current Season shows empty Current Season state", async () => {
+  const user = userEvent.setup();
+  const storageAdapter = createMemoryStorageAdapter();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={storageAdapter}
+      initialStore={{
+        version: 1,
+        entries: [
+          {
+            id: "entry-only",
+            rs: 42000,
+            recordedAt: "2026-07-15T10:00:00.000Z",
+          },
+        ],
+      }}
+    />,
+  );
+
+  await user.click(await screen.findByRole("button", { name: "Delete entry-only" }));
+  const dialog = await screen.findByRole("dialog", { name: "Delete Entry" });
+  await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+  expect(screen.queryByRole("dialog", { name: "Delete Entry" })).not.toBeInTheDocument();
+  expect(screen.getByLabelText("No RS logged")).toHaveTextContent("—");
+  expect(screen.getByText("Log your first RS to get started.")).toBeInTheDocument();
+  expect(screen.queryByLabelText("RS sparkline")).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("Season summary")).not.toBeInTheDocument();
+  expect(screen.getByText("No Entries yet.")).toBeInTheDocument();
+
+  const raw = storageAdapter.getItem("rank-tracker-local-store");
+  const store = JSON.parse(raw!) as { entries: unknown[] };
+  expect(store.entries).toHaveLength(0);
 });
 
 test("Local store document shape is initialized with empty entries", async () => {
