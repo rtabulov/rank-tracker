@@ -63,5 +63,5 @@ Not nested by Season. Import migration rules live with the Export/Import format 
 ## Consequences
 
 - Season 12+ = code/content update that sets previous `endUtc` = new `startUtc`.
-- Exact RS min/max validation deferred.
+- RS input validation: required integer `rs >= 0`; no max; no Δ-from-previous clamp (flow locked in #7).
 - Schema bumps use `version`; Import strategy (merge vs replace) deferred to Export/Import ticket.

@@ -43,5 +43,5 @@ No envelope, export timestamp, or app id. Unknown fields on the root or Entry ar
 ## Consequences
 
 - Suggested download filename and exact validation error copy left to UI work.
-- RS min/max bounds still deferred (same as ADR 0001).
+- RS input bounds for the form are `rs >= 0` (no max); Import still only checks Entry shape unless a later schema rule adds range checks.
 - First schema bump must add a migrator; until then only `version: 1` Imports succeed.

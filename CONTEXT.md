@@ -17,16 +17,20 @@ The player's current ranked progression value in The Finals; the number each Ent
 _Avoid_: MMR, ELO, rating, RP, league points
 
 **Season view**:
-The main screen for one Season — RS line chart, Season summary, and Entry list.
+The main screen for one Season — Latest RS as the hero, a compact RS line, Season summary, and an Entry timeline (single-column; same structure on mobile). On the Current Season with 0 Entries: the hero shows an empty signal (not RS 0) plus a short “log first RS” line; sparkline and Season summary are omitted; the Entry timeline keeps its region with a short empty line; Log RS stays the primary CTA. That empty Current Season state is the first-run experience; v1 has no separate onboarding (no welcome, coach marks, Import nudge, or gated Log RS).
 _Avoid_: Dashboard, home, history page, overview
 
 **Current Season**:
-The Season whose start/end window contains today's date; the Season view opens on it by default.
+The Season whose start/end window contains today's date; the Season view opens on it by default. Always navigable, including when it has 0 Entries.
 _Avoid_: Active season, latest season, selected season
 
 **Season summary**:
-The aggregate figures for one Season shown on the Season view (which figures are specified separately).
+The aggregate figures for one Season on the Season view: Latest RS, Season high, Season low, Season net, Entry count, and Avg Δ per Entry; on the Current Season only, also Δ last 7 days and Days since last Entry.
 _Avoid_: Stats bar, KPIs, metrics panel, overview cards
+
+**Season net**:
+Latest RS minus the first Entry's RS in that Season (signed; zero when the Season has a single Entry).
+_Avoid_: Net change, season delta, total gain
 
 **Local store**:
 The on-device persistence holding the player's Entries and related v1 data.
