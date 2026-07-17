@@ -21,7 +21,7 @@ The main screen for one Season — Latest RS as the hero, a compact RS line, Sea
 _Avoid_: Dashboard, home, history page, overview
 
 **Current Season**:
-The Season whose start/end window contains today's date; the Season view opens on it by default. Always navigable, including when it has 0 Entries.
+The Season whose start/end window contains today's date; the Season view opens on it by default. Always navigable, including when it has 0 Entries. A ranked cutover does not auto-switch the selected Season while the session is open — the Player switches via the Season control or opens the app later on the new Current Season. If the selected Season becomes non-navigable (past Season with 0 Entries), the Season view snaps to Current Season.
 _Avoid_: Active season, latest season, selected season
 
 **Season summary**:
