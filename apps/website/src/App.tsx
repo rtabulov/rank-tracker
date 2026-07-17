@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
@@ -6,12 +6,21 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  useNavigate,
+  useSearch,
   type AnyRouter,
   type RouterHistory,
 } from "@tanstack/react-router";
-import { ExampleNameForm } from "@/components/example-name-form";
+import { LocalStoreProvider } from "@/components/local-store-provider";
 import { ModeToggle } from "@/components/mode-toggle";
+import { SeasonView } from "@/components/season-view";
 import { ThemeProvider } from "@/components/theme-provider";
+import { getCurrentSeason } from "@/lib/seasons";
+import type { LocalStore, StorageAdapter } from "@/lib/types";
+
+type SeasonSearch = {
+  season?: number;
+};
 
 const rootRoute = createRootRoute({
   component: RootLayout,
@@ -20,7 +29,17 @@ const rootRoute = createRootRoute({
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
-  component: HomePage,
+  validateSearch: (search: Record<string, unknown>): SeasonSearch => {
+    const season = search.season;
+    if (typeof season === "number" && Number.isInteger(season)) {
+      return { season };
+    }
+    if (typeof season === "string" && /^\d+$/.test(season)) {
+      return { season: Number(season) };
+    }
+    return {};
+  },
+  component: SeasonViewPage,
 });
 
 const routeTree = rootRoute.addChildren([indexRoute]);
@@ -57,20 +76,40 @@ function RootLayout() {
   );
 }
 
-function HomePage() {
-  return (
-    <main className="flex flex-1 flex-col gap-4 px-6 pb-6">
-      <ExampleNameForm />
-    </main>
-  );
+function SeasonViewPage() {
+  const navigate = useNavigate({ from: indexRoute.id });
+  const search = useSearch({ from: indexRoute.id });
+  const currentSeason = getCurrentSeason();
+  const selectedSeason = search.season ?? currentSeason.number;
+
+  useEffect(() => {
+    if (search.season === undefined) {
+      void navigate({
+        search: { season: currentSeason.number },
+        replace: true,
+      });
+    }
+  }, [currentSeason.number, navigate, search.season]);
+
+  return <SeasonView seasonNumber={selectedSeason} />;
 }
 
-export function App({ router = defaultRouter }: { router?: AnyRouter }) {
+export function App({
+  router = defaultRouter,
+  storageAdapter,
+  initialStore,
+}: {
+  router?: AnyRouter;
+  storageAdapter?: StorageAdapter;
+  initialStore?: LocalStore;
+}) {
   const [queryClient] = useState(() => new QueryClient());
 
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <LocalStoreProvider storageAdapter={storageAdapter} initialStore={initialStore}>
+        <RouterProvider router={router} />
+      </LocalStoreProvider>
     </QueryClientProvider>
   );
 }
