@@ -105,7 +105,7 @@ export function getEntriesForSeason(entries: Entry[], seasonNumber: number): Ent
 }
 
 export function seasonHasEntries(entries: Entry[], seasonNumber: number): boolean {
-  return getEntriesForSeason(entries, seasonNumber).length > 0;
+  return entries.some((entry) => getSeasonForTimestamp(entry.recordedAt)?.number === seasonNumber);
 }
 
 export function isSeasonNavigable(
