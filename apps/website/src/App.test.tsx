@@ -94,6 +94,21 @@ test("Log RS opens overlay with Save and recordedAt fields", async () => {
   expect(screen.getByLabelText(/^recorded at$/i)).toBeInTheDocument();
 });
 
+test("Escape dismisses Log RS overlay without saving", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
+
+  await user.click(await screen.findByRole("button", { name: "Log RS" }));
+  expect(await screen.findByRole("dialog", { name: "Log RS" })).toBeInTheDocument();
+
+  await user.keyboard("{Escape}");
+
+  expect(screen.queryByRole("dialog", { name: "Log RS" })).not.toBeInTheDocument();
+});
+
 test("invalid RS shows validation error in Log RS overlay", async () => {
   const user = userEvent.setup();
   const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });

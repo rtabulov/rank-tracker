@@ -1,4 +1,5 @@
 import { useForm } from "@tanstack/react-form";
+import { useEffect } from "react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { ViewportOverlay } from "@/components/viewport-overlay";
@@ -36,10 +37,7 @@ export function LogRsOverlay({ open, seasonNumber, onClose, onSaved }: LogRsOver
     onSubmit: async ({ value }) => {
       const recordedAt = fromDatetimeLocalValue(value.recordedAtLocal);
       const derivedSeason = getSeasonForTimestamp(recordedAt);
-      if (derivedSeason === null) {
-        return;
-      }
-      if (derivedSeason.number !== seasonNumber) {
+      if (derivedSeason === null || derivedSeason.number !== seasonNumber) {
         return;
       }
 
@@ -51,6 +49,17 @@ export function LogRsOverlay({ open, seasonNumber, onClose, onSaved }: LogRsOver
       onClose();
     },
   });
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    form.reset({
+      rs: "",
+      recordedAtLocal: toDatetimeLocalValue(new Date()),
+    });
+  }, [form, open]);
 
   return (
     <ViewportOverlay open={open} title="Log RS" titleId="log-rs-title" onClose={onClose}>

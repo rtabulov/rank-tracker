@@ -1,7 +1,8 @@
+import { nanoid } from "nanoid";
 import type { Entry } from "./types.ts";
 
 export function createEntryId(): string {
-  return crypto.randomUUID();
+  return nanoid();
 }
 
 export function createEntry(input: { rs: number; recordedAt: string; id?: string }): Entry {
