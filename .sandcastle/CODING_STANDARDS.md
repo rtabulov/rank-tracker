@@ -57,6 +57,7 @@ Full detail: `docs/agents/domain.md`.
 
 ## Issues & commits (Sandcastle)
 
-- Work one Sandcastle-labelled issue per iteration.
+- Work one Sandcastle-labelled issue per iteration (hard-pinned by the orchestrator).
 - Implement commits: `RALPH:` prefix and include `#N` for the issue.
-- Do not close an issue until the fix is committed and `vp run ready` passes.
+- Run `vp run ready` before committing.
+- **Do not close the GitHub issue** after commit. Leave it open for the host orchestrator to open a **draft PR** with `Closes #N`; merge closes the issue.

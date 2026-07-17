@@ -1,48 +1,238 @@
-// Sequential Reviewer — implement-then-review loop
+// Sequential Reviewer — pick → implement → review → draft PR
 //
-// Two-phase workflow per issue (aligned with /implement + /tdd + /code-review):
-//   Phase 1 (Implement): Agent picks an open Sandcastle issue, works red → green
-//                        at pre-agreed seams (repo defaults), commits, signals done.
-//                        No refactoring in this phase — vertical slices only.
-//   Phase 2 (Review):    Second agent reviews the branch on Standards + Spec axes
-//                        (see review-prompt.md), applies refactors/fixes on the
-//                        same branch, or does nothing if both axes are clean.
-//
-// Both phases share a single sandbox created via createSandbox(), so the
-// implementer and reviewer work on the same explicit branch.
-//
-// The outer loop repeats up to MAX_ITERATIONS times, processing one issue per
-// iteration and stopping early once the backlog is exhausted (an implement
-// phase that produces no commits). This is a middle-complexity option between
-// the simple-loop (no review gate) and the parallel-planner (concurrent
-// execution with a planning phase).
+// Phase 0 (Pick):    Host agent (no sandbox, head) chooses the next Sandcastle
+//                    issue + branch slug. Orchestrator validates, claims, and
+//                    builds sandcastle/<slug>-<N>.
+// Phase 1 (Implement): Agent implements the pinned issue on that named branch.
+//                      Does not close the issue.
+// Phase 2 (Review):  Second agent reviews Standards + Spec on the same branch.
+// Publish:           Host pushes the branch and opens a draft PR (Closes #N).
 //
 // Usage:
-//   npx tsx .sandcastle/main.ts
-// Or add to package.json:
-//   "scripts": { "sandcastle": "npx tsx .sandcastle/main.ts" }
+//   vp run sandcastle
+//   # or: vp exec tsx .sandcastle/main.ts
 
+import { execFileSync } from "node:child_process";
 import * as sandcastle from "@ai-hero/sandcastle";
 import { docker } from "@ai-hero/sandcastle/sandboxes/docker";
+import { noSandbox } from "@ai-hero/sandcastle/sandboxes/no-sandbox";
+import {
+  buildDraftPrMetadata,
+  decideAfterBranchCheck,
+  decideAfterClaim,
+  decideAfterPicker,
+  interpretPickerSelection,
+  pickerSelectionSchema,
+  type OrchestratorDecision,
+} from "./orchestration.ts";
 
 // ---------------------------------------------------------------------------
 // Configuration
 // ---------------------------------------------------------------------------
 
-// Maximum number of implement→review cycles to run before stopping.
-// Each cycle works on one issue. Raise this to process more issues per run.
 const MAX_ITERATIONS = 10;
+const AGENT_MODEL = "composer-latest";
 
-// Hooks run inside the sandbox before the agent starts each iteration.
-// vp install ensures the sandbox always has fresh dependencies.
 const hooks = {
   sandbox: { onSandboxReady: [{ command: "vp install" }] },
 };
 
-// Copy node_modules from the host into the worktree before each sandbox
-// starts. Avoids a full pnpm install from scratch; the hook above handles
-// platform-specific binaries and any packages added since the last copy.
 const copyToWorktree = ["node_modules"];
+
+// ---------------------------------------------------------------------------
+// Host helpers (impure)
+// ---------------------------------------------------------------------------
+
+function logStop(decision: Extract<OrchestratorDecision, { action: "stop" }>) {
+  const extra = decision.detail
+    ? ` (${decision.detail})`
+    : decision.branch
+      ? ` (${decision.branch})`
+      : "";
+  console.log(`Stopping: ${decision.reason}${extra}`);
+}
+
+function currentGithubLogin(): string {
+  return execFileSync("gh", ["api", "user", "--jq", ".login"], {
+    encoding: "utf8",
+  }).trim();
+}
+
+function claimIssue(issueNumber: number): "claimed" | "already-assigned" {
+  const me = currentGithubLogin();
+  const raw = execFileSync("gh", ["issue", "view", String(issueNumber), "--json", "assignees"], {
+    encoding: "utf8",
+  });
+  const parsed = JSON.parse(raw) as { assignees: { login: string }[] };
+  const assignees = parsed.assignees.map((a) => a.login);
+  if (assignees.some((login) => login !== me)) {
+    return "already-assigned";
+  }
+  if (!assignees.includes(me)) {
+    execFileSync("gh", ["issue", "edit", String(issueNumber), "--add-assignee", "@me"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  }
+  return "claimed";
+}
+
+function branchExists(branch: string): {
+  existsLocally: boolean;
+  existsRemotely: boolean;
+} {
+  let existsLocally = false;
+  try {
+    execFileSync("git", ["show-ref", "--verify", "--quiet", `refs/heads/${branch}`], {
+      stdio: "ignore",
+    });
+    existsLocally = true;
+  } catch {
+    existsLocally = false;
+  }
+
+  let existsRemotely = false;
+  try {
+    const out = execFileSync("git", ["ls-remote", "--heads", "origin", branch], {
+      encoding: "utf8",
+    });
+    existsRemotely = out.trim().length > 0;
+  } catch {
+    existsRemotely = false;
+  }
+
+  return { existsLocally, existsRemotely };
+}
+
+function fetchIssueTitle(issueNumber: number): string {
+  const raw = execFileSync("gh", ["issue", "view", String(issueNumber), "--json", "title"], {
+    encoding: "utf8",
+  });
+  return (JSON.parse(raw) as { title: string }).title;
+}
+
+function publishDraftPr(input: {
+  branch: string;
+  worktreePath: string;
+  issueNumber: number;
+  issueTitle: string;
+}) {
+  const meta = buildDraftPrMetadata({
+    issueNumber: input.issueNumber,
+    issueTitle: input.issueTitle,
+  });
+
+  execFileSync("git", ["push", "-u", "origin", input.branch], {
+    cwd: input.worktreePath,
+    stdio: "inherit",
+  });
+
+  execFileSync(
+    "gh",
+    ["pr", "create", "--draft", "--title", meta.title, "--body", meta.body, "--head", input.branch],
+    { cwd: input.worktreePath, stdio: "inherit" },
+  );
+}
+
+async function pickIssue(attempt: 1 | 2): Promise<OrchestratorDecision> {
+  try {
+    const result = await sandcastle.run({
+      name: `picker-${attempt}`,
+      maxIterations: 1,
+      agent: sandcastle.cursor(AGENT_MODEL),
+      sandbox: noSandbox(),
+      branchStrategy: { type: "head" },
+      promptFile: "./.sandcastle/pick-prompt.md",
+      output: sandcastle.Output.object({
+        tag: "pick",
+        schema: pickerSelectionSchema,
+      }),
+      completionSignal: "<promise>COMPLETE</promise>",
+    });
+
+    const kind = interpretPickerSelection(result.output);
+    return decideAfterPicker({ attempt, ...kind });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : "picker failed without details";
+    return decideAfterPicker({
+      attempt,
+      kind: "invalid",
+      detail,
+    });
+  }
+}
+
+async function selectClaimedBranch(): Promise<
+  | { ok: true; issueNumber: number; branch: string; issueTitle: string }
+  | { ok: false; reason: string }
+> {
+  let pickAttempt: 1 | 2 = 1;
+  let claimAttempt: 1 | 2 = 1;
+
+  while (true) {
+    const pickDecision = await pickIssue(pickAttempt);
+    if (pickDecision.action === "stop") {
+      logStop(pickDecision);
+      return { ok: false, reason: pickDecision.reason };
+    }
+    if (pickDecision.action === "retry-picker") {
+      if (pickAttempt === 2) {
+        logStop({
+          action: "stop",
+          reason: pickDecision.reason,
+          detail: pickDecision.detail,
+        });
+        return { ok: false, reason: pickDecision.reason };
+      }
+      console.log(
+        `Picker retry (${pickDecision.reason}${pickDecision.detail ? `: ${pickDecision.detail}` : ""})`,
+      );
+      pickAttempt = 2;
+      continue;
+    }
+
+    const { issueNumber, branch } = pickDecision;
+    console.log(`Picked #${issueNumber} → ${branch}`);
+
+    // Check branch existence before claiming so a stop does not leave a stale assignee.
+    const existence = branchExists(branch);
+    const branchDecision = decideAfterBranchCheck({
+      ...existence,
+      issueNumber,
+      branch,
+    });
+    if (branchDecision.action === "stop") {
+      logStop(branchDecision);
+      return { ok: false, reason: branchDecision.reason };
+    }
+
+    const claimOutcome = claimIssue(issueNumber);
+    const claimDecision = decideAfterClaim({
+      claimAttempt,
+      outcome: claimOutcome,
+      issueNumber,
+      branch,
+    });
+
+    if (claimDecision.action === "retry-picker") {
+      console.log("Claim conflict — re-picking once.");
+      claimAttempt = 2;
+      pickAttempt = 1;
+      continue;
+    }
+    if (claimDecision.action === "stop") {
+      logStop(claimDecision);
+      return { ok: false, reason: claimDecision.reason };
+    }
+
+    return {
+      ok: true,
+      issueNumber,
+      branch,
+      issueTitle: fetchIssueTitle(issueNumber),
+    };
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Main loop
@@ -51,11 +241,12 @@ const copyToWorktree = ["node_modules"];
 for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   console.log(`\n=== Iteration ${iteration}/${MAX_ITERATIONS} ===\n`);
 
-  // Generate a unique branch name for this iteration.
-  const branch = `sandcastle/sequential-reviewer/${Date.now()}`;
+  const selected = await selectClaimedBranch();
+  if (!selected.ok) {
+    break;
+  }
 
-  // Create a single sandbox that both the implementer and reviewer share.
-  // This gives both agents a real, named branch that persists across phases.
+  const { issueNumber, branch, issueTitle } = selected;
   const sandbox = await sandcastle.createSandbox({
     branch,
     sandbox: docker(),
@@ -64,53 +255,42 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
   });
 
   try {
-    // -----------------------------------------------------------------------
-    // Phase 1: Implement
-    //
-    // Picks the next open issue and implements it red → green (vertical
-    // slices at seam defaults). Refactoring is deferred to Phase 2.
-    //
-    // The agent signals completion via <promise>COMPLETE</promise> when done.
-    // -----------------------------------------------------------------------
-    // One iteration so each outer pass implements a single issue on its own
-    // branch, then hands it to the reviewer. A higher value lets the agent
-    // drain the whole backlog onto this one branch in a single pass, which
-    // defeats the per-issue review.
     const implement = await sandbox.run({
       name: "implementer",
       maxIterations: 1,
-      agent: sandcastle.cursor("composer-latest"),
+      agent: sandcastle.cursor(AGENT_MODEL),
       promptFile: "./.sandcastle/implement-prompt.md",
+      promptArgs: {
+        ISSUE_NUMBER: issueNumber,
+      },
     });
 
     if (!implement.commits.length) {
-      // No commits means the backlog is empty or every remaining issue is
-      // blocked — there is nothing left to implement or review, so stop.
-      console.log("Implementation agent made no commits. Stopping.");
+      console.log("Implementation agent made no commits. Stopping (empty or blocked work).");
       break;
     }
 
     console.log(`\nImplementation complete on branch: ${branch}`);
     console.log(`Commits: ${implement.commits.length}`);
 
-    // -----------------------------------------------------------------------
-    // Phase 2: Review
-    //
-    // Standards + Spec review of the Phase 1 branch ({{BRANCH}} vs built-in
-    // {{TARGET_BRANCH}}). Owns refactoring and Spec gaps; commits fixes on
-    // the same branch or no-ops if both axes are clean.
-    // -----------------------------------------------------------------------
     await sandbox.run({
       name: "reviewer",
       maxIterations: 1,
-      agent: sandcastle.cursor("composer-latest"),
+      agent: sandcastle.cursor(AGENT_MODEL),
       promptFile: "./.sandcastle/review-prompt.md",
       promptArgs: {
         BRANCH: branch,
       },
     });
 
-    console.log("\nReview complete.");
+    console.log("\nReview complete. Publishing draft PR…");
+    publishDraftPr({
+      branch,
+      worktreePath: sandbox.worktreePath,
+      issueNumber,
+      issueTitle,
+    });
+    console.log(`Draft PR opened for #${issueNumber} (${branch}).`);
   } finally {
     await sandbox.close();
   }

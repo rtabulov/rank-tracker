@@ -15,4 +15,8 @@ export default defineConfig({
   run: {
     cache: true,
   },
+  test: {
+    include: [".sandcastle/*.test.ts"],
+    exclude: [".sandcastle/worktrees/**", "**/node_modules/**"],
+  },
 });
