@@ -1,4 +1,4 @@
-import { APP_SCHEMA_VERSION } from "./export.ts";
+import { APP_SCHEMA_VERSION } from "./schema.ts";
 import type { Entry, LocalStore } from "./types.ts";
 
 export type ImportErrorCategory = "invalid-json" | "wrong-shape" | "unsupported-version";

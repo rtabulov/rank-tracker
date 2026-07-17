@@ -352,6 +352,83 @@ test("Import rejects duplicate Entry ids without changing Local store", async ()
   expect(JSON.parse(storageAdapter.getItem("rank-tracker-local-store")!)).toEqual(initialStore);
 });
 
+test("Import migrates lower version and replaces Local store", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const storageAdapter = createMemoryStorageAdapter({ version: 1, entries: [] });
+
+  render(<App router={router} storageAdapter={storageAdapter} />);
+
+  await screen.findByText("No Entries yet.");
+
+  const importDocument = {
+    version: 0,
+    entries: [
+      {
+        id: "migrated-entry-1",
+        rs: 42000,
+        recordedAt: "2026-07-16T10:00:00.000Z",
+      },
+    ],
+  };
+  const file = new File([JSON.stringify(importDocument)], "legacy.json", {
+    type: "application/json",
+  });
+
+  await user.click(await screen.findByRole("button", { name: "Data" }));
+  await user.upload(document.querySelector('input[type="file"]') as HTMLInputElement, file);
+  await user.click(await screen.findByRole("button", { name: "Replace" }));
+
+  expect(await screen.findByLabelText("Season hero")).toHaveTextContent("42,000");
+  expect(JSON.parse(storageAdapter.getItem("rank-tracker-local-store")!)).toEqual({
+    version: 1,
+    entries: importDocument.entries,
+  });
+});
+
+test("Import ignores unknown fields and persists only Local store shape", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const storageAdapter = createMemoryStorageAdapter({ version: 1, entries: [] });
+
+  render(<App router={router} storageAdapter={storageAdapter} />);
+
+  await screen.findByText("No Entries yet.");
+
+  const importDocument = {
+    version: 1,
+    exportedAt: "2026-07-17T12:00:00.000Z",
+    entries: [
+      {
+        id: "imported-entry-1",
+        rs: 55000,
+        recordedAt: "2026-07-16T10:00:00.000Z",
+        notes: "ignore me",
+      },
+    ],
+  };
+  const file = new File([JSON.stringify(importDocument)], "forward-compat.json", {
+    type: "application/json",
+  });
+
+  await user.click(await screen.findByRole("button", { name: "Data" }));
+  await user.upload(document.querySelector('input[type="file"]') as HTMLInputElement, file);
+  await user.click(await screen.findByRole("button", { name: "Replace" }));
+
+  expect(JSON.parse(storageAdapter.getItem("rank-tracker-local-store")!)).toEqual({
+    version: 1,
+    entries: [
+      {
+        id: "imported-entry-1",
+        rs: 55000,
+        recordedAt: "2026-07-16T10:00:00.000Z",
+      },
+    ],
+  });
+});
+
 test("Import rejects unsupported version without changing Local store", async () => {
   const user = userEvent.setup();
   const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });

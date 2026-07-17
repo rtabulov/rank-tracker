@@ -1,7 +1,5 @@
 import type { LocalStore } from "./types.ts";
 
-export const APP_SCHEMA_VERSION = 1;
-
 export function exportFilename(date = new Date()): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
