@@ -1,6 +1,14 @@
 import { useEffect } from "react";
 
-import { cycleExplicitTheme, useTheme } from "@/components/theme-provider";
+import { useTheme } from "@/components/theme-provider";
+
+type Theme = "dark" | "light" | "system";
+
+function cycleExplicitTheme(theme: Theme, effectiveTheme: "light" | "dark"): "light" | "dark" {
+  if (theme === "light") return "dark";
+  if (theme === "dark") return "light";
+  return effectiveTheme === "dark" ? "light" : "dark";
+}
 
 function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -13,7 +21,7 @@ export function ThemeHotkey() {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "d" && event.key !== "D") return;
+      if (event.key.toLowerCase() !== "d") return;
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       if (isEditableTarget(event.target)) return;
 
