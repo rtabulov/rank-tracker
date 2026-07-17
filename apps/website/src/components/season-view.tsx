@@ -2,17 +2,24 @@ import { useState } from "react";
 import { useLocalStore } from "@/components/local-store-provider";
 import { LogRsOverlay } from "@/components/log-rs-overlay";
 import { RsSparkline } from "@/components/rs-sparkline";
+import { SeasonControl } from "@/components/season-control";
 import { Button } from "@/components/ui/button";
 import { addEntry } from "@/lib/entries";
 import { formatLocalWhen, formatSigned } from "@/lib/format";
 import { computeSeasonSummary } from "@/lib/season-summary";
-import { getCurrentSeason, getEntriesForSeason, getSeasonByNumber } from "@/lib/seasons";
+import {
+  getCurrentSeason,
+  getEntriesForSeason,
+  getNavigableSeasons,
+  getSeasonByNumber,
+} from "@/lib/seasons";
 
 type SeasonViewProps = {
   seasonNumber: number;
+  onSeasonSelect: (seasonNumber: number) => void;
 };
 
-export function SeasonView({ seasonNumber }: SeasonViewProps) {
+export function SeasonView({ seasonNumber, onSeasonSelect }: SeasonViewProps) {
   const { store, setStore } = useLocalStore();
   const [logRsOpen, setLogRsOpen] = useState(false);
   const season = getSeasonByNumber(seasonNumber) ?? getCurrentSeason();
@@ -20,6 +27,7 @@ export function SeasonView({ seasonNumber }: SeasonViewProps) {
   const isEmpty = entries.length === 0;
   const isCurrentSeason = season.number === getCurrentSeason().number;
   const summary = computeSeasonSummary(entries, { isCurrentSeason });
+  const navigableSeasons = getNavigableSeasons(store.entries);
 
   return (
     <main className="flex flex-1 flex-col gap-6 px-6 pb-6">
@@ -117,6 +125,12 @@ export function SeasonView({ seasonNumber }: SeasonViewProps) {
           </ul>
         )}
       </section>
+
+      <SeasonControl
+        seasons={navigableSeasons}
+        selectedSeasonNumber={season.number}
+        onSelect={onSeasonSelect}
+      />
 
       <Button type="button" onClick={() => setLogRsOpen(true)}>
         Log RS
