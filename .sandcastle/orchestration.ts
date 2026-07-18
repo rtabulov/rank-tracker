@@ -1,83 +1,24 @@
-const KEBAB_CASE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const RESERVED_SLUGS = new Set(["main", "master", "head"]);
-const CONVENTIONAL_TYPE_PREFIXES = new Set([
-  "feat",
-  "fix",
-  "docs",
-  "style",
-  "refactor",
-  "perf",
-  "test",
-  "build",
-  "ci",
-  "chore",
-  "revert",
-]);
-
-const BRANCH_PREFIX = "sandcastle/";
-const MAX_BRANCH_LENGTH = 60;
-
-export type SlugValidation = { ok: true; slug: string } | { ok: false; reason: string };
-
 export type PickerKind =
   | { kind: "empty" }
   | { kind: "invalid"; detail: string }
-  | { kind: "picked"; issueNumber: number; branchSlug: string };
+  | { kind: "picked"; issueNumber: number };
 
 export type OrchestratorDecision =
-  | { action: "proceed"; issueNumber: number; branch: string }
+  | { action: "proceed"; issueNumber: number }
   | { action: "retry-picker"; reason: "bad-picker" | "claim-conflict"; detail?: string }
   | {
       action: "stop";
-      reason: "empty-backlog" | "bad-picker" | "claim-conflict" | "branch-exists";
+      reason: "empty-backlog" | "bad-picker" | "claim-conflict";
       detail?: string;
-      branch?: string;
     };
 
 export type ClaimOutcome = "claimed" | "already-assigned";
 
-/** Validate a picker-provided branch slug for issue `issueNumber`. */
-export function validateBranchSlug(rawSlug: string, issueNumber: number): SlugValidation {
-  const slug = rawSlug.trim();
-  if (slug.length === 0) {
-    return { ok: false, reason: "empty slug" };
-  }
-  if (!KEBAB_CASE.test(slug)) {
-    return { ok: false, reason: "slug must be kebab-case" };
-  }
-  if (RESERVED_SLUGS.has(slug)) {
-    return { ok: false, reason: `reserved slug: ${slug}` };
-  }
-  const firstSegment = slug.split("-")[0] ?? slug;
-  if (CONVENTIONAL_TYPE_PREFIXES.has(firstSegment)) {
-    return {
-      ok: false,
-      reason: `slug looks like a Conventional Commit type-prefix: ${firstSegment}`,
-    };
-  }
-  if (slugContainsIssueNumber(slug, issueNumber)) {
-    return {
-      ok: false,
-      reason: `slug already contains issue number ${issueNumber}`,
-    };
-  }
-  return { ok: true, slug };
-}
+export type HostGate =
+  | { ok: true }
+  | { ok: false; reason: "not-main" | "dirty" | "not-latest"; detail?: string };
 
-function slugContainsIssueNumber(slug: string, issueNumber: number): boolean {
-  const n = String(issueNumber);
-  if (slug === n) return true;
-  const segments = slug.split("-");
-  return segments.includes(n);
-}
-
-/** Build `sandcastle/<slug>-<N>`, truncating the slug so the full name is ≤60. */
-export function buildBranchName(slug: string, issueNumber: number): string {
-  const suffix = `-${issueNumber}`;
-  const maxSlugLength = MAX_BRANCH_LENGTH - BRANCH_PREFIX.length - suffix.length;
-  const truncated = slug.slice(0, Math.max(0, maxSlugLength)).replace(/-+$/u, "");
-  return `${BRANCH_PREFIX}${truncated}${suffix}`;
-}
+export type ImplementDecision = { action: "publish" } | { action: "stop"; reason: "no-commits" };
 
 function badPickerDecision(attempt: 1 | 2, detail: string): OrchestratorDecision {
   if (attempt === 1) {
@@ -93,16 +34,9 @@ export function decideAfterPicker(input: PickerKind & { attempt: 1 | 2 }): Orche
   if (input.kind === "invalid") {
     return badPickerDecision(input.attempt, input.detail);
   }
-
-  const validated = validateBranchSlug(input.branchSlug, input.issueNumber);
-  if (!validated.ok) {
-    return badPickerDecision(input.attempt, validated.reason);
-  }
-
   return {
     action: "proceed",
     issueNumber: input.issueNumber,
-    branch: buildBranchName(validated.slug, input.issueNumber),
   };
 }
 
@@ -110,7 +44,6 @@ export function decideAfterClaim(input: {
   claimAttempt: 1 | 2;
   outcome: ClaimOutcome;
   issueNumber: number;
-  branch: string;
 }): OrchestratorDecision {
   if (input.outcome === "already-assigned") {
     if (input.claimAttempt === 1) {
@@ -121,49 +54,41 @@ export function decideAfterClaim(input: {
   return {
     action: "proceed",
     issueNumber: input.issueNumber,
-    branch: input.branch,
   };
 }
 
-export function decideAfterBranchCheck(input: {
-  existsLocally: boolean;
-  existsRemotely: boolean;
-  issueNumber: number;
-  branch: string;
-}): OrchestratorDecision {
-  if (input.existsLocally || input.existsRemotely) {
-    return {
-      action: "stop",
-      reason: "branch-exists",
-      branch: input.branch,
-    };
+/** Host must be on clean `main` that successfully fast-forwarded to `origin/main`. */
+export function evaluateHostGate(input: {
+  currentBranch: string;
+  isDirty: boolean;
+  isLatest: boolean;
+  detail?: string;
+}): HostGate {
+  if (input.currentBranch !== "main") {
+    return { ok: false, reason: "not-main", detail: input.currentBranch };
   }
-  return {
-    action: "proceed",
-    issueNumber: input.issueNumber,
-    branch: input.branch,
-  };
+  if (input.isDirty) {
+    return { ok: false, reason: "dirty" };
+  }
+  if (!input.isLatest) {
+    return { ok: false, reason: "not-latest", detail: input.detail };
+  }
+  return { ok: true };
 }
 
-export function buildDraftPrMetadata(input: { issueNumber: number; issueTitle: string }): {
-  title: string;
-  body: string;
-} {
-  return {
-    title: input.issueTitle,
-    body: [
-      "## Summary",
-      "",
-      `Sandcastle implementation for #${input.issueNumber}.`,
-      "",
-      `Closes #${input.issueNumber}`,
-      "",
-    ].join("\n"),
-  };
+export function decideAfterImplement(input: { commitCount: number }): ImplementDecision {
+  if (input.commitCount < 1) {
+    return { action: "stop", reason: "no-commits" };
+  }
+  return { action: "publish" };
+}
+
+export function buildIssueCloseComment(issueNumber: number): string {
+  return `Sandcastle landed #${issueNumber} on main.`;
 }
 
 /** Picked shape from the spec; `{ empty: true }` for an empty backlog. */
-export type PickerSelection = { empty: true } | { issueNumber: number; branchSlug: string };
+export type PickerSelection = { empty: true } | { issueNumber: number };
 
 /** Standard Schema for picker structured output (`Output.object`). */
 export const pickerSelectionSchema: {
@@ -188,19 +113,19 @@ export const pickerSelectionSchema: {
         return { issues: [{ message: "expected object" }] };
       }
       const record = value as Record<string, unknown>;
+      if ("branchSlug" in record) {
+        return { issues: [{ message: "branchSlug is not allowed" }] };
+      }
       if (record.empty === true) {
         return { value: { empty: true } };
       }
-      const { issueNumber, branchSlug } = record;
+      const { issueNumber } = record;
       if (typeof issueNumber !== "number" || !Number.isInteger(issueNumber) || issueNumber < 1) {
         return {
           issues: [{ message: "issueNumber must be a positive integer" }],
         };
       }
-      if (typeof branchSlug !== "string") {
-        return { issues: [{ message: "branchSlug must be a string" }] };
-      }
-      return { value: { issueNumber, branchSlug } };
+      return { value: { issueNumber } };
     },
   },
 };
@@ -215,7 +140,6 @@ export function interpretPickerSelection(selection: PickerSelection): PickerKind
   return {
     kind: "picked",
     issueNumber: selection.issueNumber,
-    branchSlug: selection.branchSlug,
   };
 }
 

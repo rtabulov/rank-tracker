@@ -1,12 +1,10 @@
-// Sequential Reviewer — pick → implement → review → draft PR
+// Sequential Sandcastle — pick → implement (/implement) → push main → close issue
 //
 // Phase 0 (Pick):    Host agent (no sandbox, head) chooses the next Sandcastle
-//                    issue + branch slug. Orchestrator validates, claims, and
-//                    builds sandcastle/<slug>-<N>.
-// Phase 1 (Implement): Agent implements the pinned issue on that named branch.
-//                      Does not close the issue.
-// Phase 2 (Review):  Second agent reviews Standards + Spec on the same branch.
-// Publish:           Host pushes the branch and opens a draft PR (Closes #N).
+//                    issue. Orchestrator validates and claims.
+// Phase 1 (Implement): One agent run on merge-to-head follows /implement
+//                      (TDD + /code-review + commit). Does not push or close.
+// Publish:           Host pushes origin/main and closes the issue.
 //
 // Usage:
 //   vp run sandcastle
@@ -17,12 +15,14 @@ import * as sandcastle from "@ai-hero/sandcastle";
 import { docker } from "@ai-hero/sandcastle/sandboxes/docker";
 import { noSandbox } from "@ai-hero/sandcastle/sandboxes/no-sandbox";
 import {
-  buildDraftPrMetadata,
-  decideAfterBranchCheck,
+  buildIssueCloseComment,
   decideAfterClaim,
+  decideAfterImplement,
   decideAfterPicker,
+  evaluateHostGate,
   interpretPickerSelection,
   pickerSelectionSchema,
+  type HostGate,
   type OrchestratorDecision,
 } from "./orchestration.ts";
 
@@ -43,12 +43,10 @@ const copyToWorktree = ["node_modules"];
 // Host helpers (impure)
 // ---------------------------------------------------------------------------
 
-function logStop(decision: Extract<OrchestratorDecision, { action: "stop" }>) {
-  const extra = decision.detail
-    ? ` (${decision.detail})`
-    : decision.branch
-      ? ` (${decision.branch})`
-      : "";
+function logStop(
+  decision: Extract<OrchestratorDecision, { action: "stop" }> | Extract<HostGate, { ok: false }>,
+) {
+  const extra = decision.detail ? ` (${decision.detail})` : "";
   console.log(`Stopping: ${decision.reason}${extra}`);
 }
 
@@ -77,60 +75,53 @@ function claimIssue(issueNumber: number): "claimed" | "already-assigned" {
   return "claimed";
 }
 
-function branchExists(branch: string): {
-  existsLocally: boolean;
-  existsRemotely: boolean;
-} {
-  let existsLocally = false;
-  try {
-    execFileSync("git", ["show-ref", "--verify", "--quiet", `refs/heads/${branch}`], {
-      stdio: "ignore",
-    });
-    existsLocally = true;
-  } catch {
-    existsLocally = false;
-  }
-
-  let existsRemotely = false;
-  try {
-    const out = execFileSync("git", ["ls-remote", "--heads", "origin", branch], {
-      encoding: "utf8",
-    });
-    existsRemotely = out.trim().length > 0;
-  } catch {
-    existsRemotely = false;
-  }
-
-  return { existsLocally, existsRemotely };
-}
-
-function fetchIssueTitle(issueNumber: number): string {
-  const raw = execFileSync("gh", ["issue", "view", String(issueNumber), "--json", "title"], {
+function ensureMainReady(): HostGate {
+  const currentBranch = execFileSync("git", ["branch", "--show-current"], {
     encoding: "utf8",
+  }).trim();
+  const isDirty =
+    execFileSync("git", ["status", "--porcelain"], {
+      encoding: "utf8",
+    }).trim().length > 0;
+
+  const beforePull = evaluateHostGate({
+    currentBranch,
+    isDirty,
+    isLatest: true,
   });
-  return (JSON.parse(raw) as { title: string }).title;
+  if (!beforePull.ok) {
+    return beforePull;
+  }
+
+  try {
+    execFileSync("git", ["pull", "--ff-only", "origin", "main"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : "git pull --ff-only failed";
+    return evaluateHostGate({
+      currentBranch,
+      isDirty: false,
+      isLatest: false,
+      detail,
+    });
+  }
+
+  return { ok: true };
 }
 
-function publishDraftPr(input: {
-  branch: string;
-  worktreePath: string;
-  issueNumber: number;
-  issueTitle: string;
-}) {
-  const meta = buildDraftPrMetadata({
-    issueNumber: input.issueNumber,
-    issueTitle: input.issueTitle,
-  });
-
-  execFileSync("git", ["push", "-u", "origin", input.branch], {
-    cwd: input.worktreePath,
+function pushMain() {
+  execFileSync("git", ["push", "origin", "main"], {
     stdio: "inherit",
   });
+}
 
+function closeIssue(issueNumber: number) {
   execFileSync(
     "gh",
-    ["pr", "create", "--draft", "--title", meta.title, "--body", meta.body, "--head", input.branch],
-    { cwd: input.worktreePath, stdio: "inherit" },
+    ["issue", "close", String(issueNumber), "--comment", buildIssueCloseComment(issueNumber)],
+    { stdio: "inherit" },
   );
 }
 
@@ -162,9 +153,8 @@ async function pickIssue(attempt: 1 | 2): Promise<OrchestratorDecision> {
   }
 }
 
-async function selectClaimedBranch(): Promise<
-  | { ok: true; issueNumber: number; branch: string; issueTitle: string }
-  | { ok: false; reason: string }
+async function selectClaimedIssue(): Promise<
+  { ok: true; issueNumber: number } | { ok: false; reason: string }
 > {
   let pickAttempt: 1 | 2 = 1;
   let claimAttempt: 1 | 2 = 1;
@@ -191,27 +181,14 @@ async function selectClaimedBranch(): Promise<
       continue;
     }
 
-    const { issueNumber, branch } = pickDecision;
-    console.log(`Picked #${issueNumber} → ${branch}`);
-
-    // Check branch existence before claiming so a stop does not leave a stale assignee.
-    const existence = branchExists(branch);
-    const branchDecision = decideAfterBranchCheck({
-      ...existence,
-      issueNumber,
-      branch,
-    });
-    if (branchDecision.action === "stop") {
-      logStop(branchDecision);
-      return { ok: false, reason: branchDecision.reason };
-    }
+    const { issueNumber } = pickDecision;
+    console.log(`Picked #${issueNumber}`);
 
     const claimOutcome = claimIssue(issueNumber);
     const claimDecision = decideAfterClaim({
       claimAttempt,
       outcome: claimOutcome,
       issueNumber,
-      branch,
     });
 
     if (claimDecision.action === "retry-picker") {
@@ -228,8 +205,6 @@ async function selectClaimedBranch(): Promise<
     return {
       ok: true,
       issueNumber,
-      branch,
-      issueTitle: fetchIssueTitle(issueNumber),
     };
   }
 }
@@ -238,62 +213,79 @@ async function selectClaimedBranch(): Promise<
 // Main loop
 // ---------------------------------------------------------------------------
 
-for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
-  console.log(`\n=== Iteration ${iteration}/${MAX_ITERATIONS} ===\n`);
+const hostGate = ensureMainReady();
+if (!hostGate.ok) {
+  logStop(hostGate);
+  console.log("\nAll done.");
+  process.exitCode = 1;
+} else {
+  for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
+    console.log(`\n=== Iteration ${iteration}/${MAX_ITERATIONS} ===\n`);
 
-  const selected = await selectClaimedBranch();
-  if (!selected.ok) {
-    break;
-  }
+    if (iteration > 1) {
+      const again = ensureMainReady();
+      if (!again.ok) {
+        logStop(again);
+        break;
+      }
+    }
 
-  const { issueNumber, branch, issueTitle } = selected;
-  const sandbox = await sandcastle.createSandbox({
-    branch,
-    sandbox: docker(),
-    hooks,
-    copyToWorktree,
-  });
-
-  try {
-    const implement = await sandbox.run({
-      name: "implementer",
-      maxIterations: 1,
-      agent: sandcastle.cursor(AGENT_MODEL),
-      promptFile: "./.sandcastle/implement-prompt.md",
-      promptArgs: {
-        ISSUE_NUMBER: issueNumber,
-      },
-    });
-
-    if (!implement.commits.length) {
-      console.log("Implementation agent made no commits. Stopping (empty or blocked work).");
+    const selected = await selectClaimedIssue();
+    if (!selected.ok) {
       break;
     }
 
-    console.log(`\nImplementation complete on branch: ${branch}`);
-    console.log(`Commits: ${implement.commits.length}`);
+    const { issueNumber } = selected;
 
-    await sandbox.run({
-      name: "reviewer",
-      maxIterations: 1,
-      agent: sandcastle.cursor(AGENT_MODEL),
-      promptFile: "./.sandcastle/review-prompt.md",
-      promptArgs: {
-        BRANCH: branch,
-      },
-    });
+    try {
+      const implement = await sandcastle.run({
+        name: "implementer",
+        maxIterations: 1,
+        agent: sandcastle.cursor(AGENT_MODEL),
+        sandbox: docker(),
+        branchStrategy: { type: "merge-to-head" },
+        hooks,
+        copyToWorktree,
+        promptFile: "./.sandcastle/implement-prompt.md",
+        promptArgs: {
+          ISSUE_NUMBER: issueNumber,
+        },
+        completionSignal: "<promise>COMPLETE</promise>",
+      });
 
-    console.log("\nReview complete. Publishing draft PR…");
-    publishDraftPr({
-      branch,
-      worktreePath: sandbox.worktreePath,
-      issueNumber,
-      issueTitle,
-    });
-    console.log(`Draft PR opened for #${issueNumber} (${branch}).`);
-  } finally {
-    await sandbox.close();
+      const afterImplement = decideAfterImplement({
+        commitCount: implement.commits.length,
+      });
+      if (afterImplement.action === "stop") {
+        console.log("Implementation agent made no commits. Stopping (empty or blocked work).");
+        break;
+      }
+
+      console.log(`\nImplementation complete on main (${implement.commits.length} commit(s)).`);
+      console.log("Pushing origin/main…");
+      try {
+        pushMain();
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        console.log(`Stopping: push failed (${detail})`);
+        break;
+      }
+
+      console.log(`Closing #${issueNumber}…`);
+      try {
+        closeIssue(issueNumber);
+        console.log(`Closed #${issueNumber}.`);
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        console.log(`Stopping: push succeeded but close failed (${detail})`);
+        break;
+      }
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      console.log(`Stopping: implement or merge failed (${detail})`);
+      break;
+    }
   }
-}
 
-console.log("\nAll done.");
+  console.log("\nAll done.");
+}

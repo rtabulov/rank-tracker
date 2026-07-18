@@ -1,6 +1,6 @@
 # Task
 
-You are the Sandcastle **picker**. Choose the next issue to implement and propose a short branch slug. You do **not** implement, commit, claim, close, or edit git/code.
+You are the Sandcastle **picker**. Choose the next issue to implement. You do **not** implement, commit, claim, close, or edit git/code.
 
 ## Open Sandcastle issues
 
@@ -27,17 +27,9 @@ Emit **exactly one** structured pick tag (JSON inside), then stop.
 
 ```
 <pick>
-{ "issueNumber": 31, "branchSlug": "log-rs-current-season" }
+{ "issueNumber": 31 }
 </pick>
 ```
-
-`branchSlug` rules (orchestrator will reject otherwise):
-
-- kebab-case only: `^[a-z0-9]+(?:-[a-z0-9]+)*$`
-- short human-readable summary of the issue (not the full title)
-- do **not** include the issue number in the slug
-- do **not** use reserved names: `main`, `master`, `head`
-- do **not** start with Conventional Commit types (`feat`, `fix`, `chore`, …)
 
 ### When the backlog is empty (no unblocked unassigned issues)
 

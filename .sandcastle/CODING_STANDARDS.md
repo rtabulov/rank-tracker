@@ -58,6 +58,6 @@ Full detail: `docs/agents/domain.md`.
 ## Issues & commits (Sandcastle)
 
 - Work one Sandcastle-labelled issue per iteration (hard-pinned by the orchestrator).
-- Implement commits: `RALPH:` prefix and include `#N` for the issue.
-- Run `vp run ready` before committing.
-- **Do not close the GitHub issue** after commit. Leave it open for the host orchestrator to open a **draft PR** with `Closes #N`; merge closes the issue.
+- Follow `/implement` → `/tdd` → `/code-review` (see `.agents/skills/`). AFK: use default TDD seams unless the issue names others.
+- Commits: Conventional Commits and include `#N` for the issue. Run `vp run ready` before committing.
+- **Do not push or close the GitHub issue.** The host merges via Sandcastle `merge-to-head`, pushes `origin/main`, then closes `#N`.
