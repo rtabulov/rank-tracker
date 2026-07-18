@@ -14,6 +14,7 @@ import {
 import { HeaderActions } from "@/components/header-actions";
 import { LocalStoreProvider } from "@/components/local-store-provider";
 import { SeasonView } from "@/components/season-view";
+import { ThemeHotkey } from "@/components/theme-hotkey";
 import { ThemeProvider } from "@/components/theme-provider";
 import { getCurrentSeason } from "@/lib/seasons";
 import type { LocalStore, StorageAdapter } from "@/lib/types";
@@ -65,6 +66,7 @@ declare module "@tanstack/react-router" {
 function RootLayout() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+      <ThemeHotkey />
       <div className="flex min-h-svh flex-col">
         <header className="flex items-center justify-between gap-4 p-6">
           <h1 className="text-2xl font-medium tracking-tight">Rank Tracker</h1>

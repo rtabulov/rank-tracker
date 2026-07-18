@@ -8,18 +8,27 @@ import { fromDatetimeLocalValue, toDatetimeLocalValue } from "@/lib/format";
 import { getSeasonForTimestamp } from "@/lib/seasons";
 import type { Entry } from "@/lib/types";
 
-type LogRsOverlayProps = {
+type EditEntryOverlayProps = {
   open: boolean;
+  entry: Entry;
   seasonNumber: number;
   onClose: () => void;
   onSaved: (entry: Entry) => void;
+  onDeleteRequest: () => void;
 };
 
-export function LogRsOverlay({ open, seasonNumber, onClose, onSaved }: LogRsOverlayProps) {
+export function EditEntryOverlay({
+  open,
+  entry,
+  seasonNumber,
+  onClose,
+  onSaved,
+  onDeleteRequest,
+}: EditEntryOverlayProps) {
   const form = useForm({
     defaultValues: {
-      rs: "",
-      recordedAtLocal: toDatetimeLocalValue(new Date()),
+      rs: String(entry.rs),
+      recordedAtLocal: toDatetimeLocalValue(new Date(entry.recordedAt)),
     },
     validators: {
       onSubmit: entryRsFormSchema,
@@ -31,11 +40,12 @@ export function LogRsOverlay({ open, seasonNumber, onClose, onSaved }: LogRsOver
         return;
       }
 
-      const entry = createEntry({
+      const updated = createEntry({
+        id: entry.id,
         rs: Number(value.rs),
         recordedAt,
       });
-      onSaved(entry);
+      onSaved(updated);
       onClose();
     },
   });
@@ -46,13 +56,13 @@ export function LogRsOverlay({ open, seasonNumber, onClose, onSaved }: LogRsOver
     }
 
     form.reset({
-      rs: "",
-      recordedAtLocal: toDatetimeLocalValue(new Date()),
+      rs: String(entry.rs),
+      recordedAtLocal: toDatetimeLocalValue(new Date(entry.recordedAt)),
     });
-  }, [form, open]);
+  }, [entry.id, entry.recordedAt, entry.rs, form, open]);
 
   return (
-    <ViewportOverlay open={open} title="Log RS" titleId="log-rs-title" onClose={onClose}>
+    <ViewportOverlay open={open} title="Edit Entry" titleId="edit-entry-title" onClose={onClose}>
       <form
         className="flex flex-col gap-4"
         onSubmit={(event) => {
@@ -109,7 +119,12 @@ export function LogRsOverlay({ open, seasonNumber, onClose, onSaved }: LogRsOver
           )}
         </form.Field>
 
-        <Button type="submit">Save</Button>
+        <div className="flex flex-col gap-2">
+          <Button type="submit">Save</Button>
+          <Button type="button" variant="outline" onClick={onDeleteRequest}>
+            Delete
+          </Button>
+        </div>
       </form>
     </ViewportOverlay>
   );
