@@ -19,12 +19,16 @@ import {
   decideAfterClaim,
   decideAfterImplement,
   decideAfterPicker,
+  decideFailureCleanup,
   evaluateHostGate,
   interpretPickerSelection,
   pickerSelectionSchema,
+  type FailureKind,
   type HostGate,
   type OrchestratorDecision,
 } from "./orchestration.ts";
+
+const IMPLEMENTER_BRANCH_PREFIX = "sandcastle/implementer/";
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -73,6 +77,64 @@ function claimIssue(issueNumber: number): "claimed" | "already-assigned" {
     });
   }
   return "claimed";
+}
+
+function unclaimIssue(issueNumber: number) {
+  const me = currentGithubLogin();
+  const raw = execFileSync("gh", ["issue", "view", String(issueNumber), "--json", "assignees"], {
+    encoding: "utf8",
+  });
+  const parsed = JSON.parse(raw) as { assignees: { login: string }[] };
+  if (!parsed.assignees.some((a) => a.login === me)) {
+    return;
+  }
+  execFileSync("gh", ["issue", "edit", String(issueNumber), "--remove-assignee", "@me"], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+}
+
+function listLocalImplementerBranches(): string[] {
+  const out = execFileSync(
+    "git",
+    ["for-each-ref", "--format=%(refname:short)", `refs/heads/${IMPLEMENTER_BRANCH_PREFIX}`],
+    { encoding: "utf8" },
+  );
+  return out
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+}
+
+function deleteLocalImplementerBranches() {
+  for (const branch of listLocalImplementerBranches()) {
+    try {
+      execFileSync("git", ["branch", "-D", branch], {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      console.log(`Deleted leftover branch ${branch}`);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      console.log(`Could not delete ${branch}: ${detail}`);
+    }
+  }
+}
+
+function cleanupAfterFailure(issueNumber: number, kind: FailureKind) {
+  const plan = decideFailureCleanup(kind);
+  if (plan.unclaim) {
+    try {
+      unclaimIssue(issueNumber);
+      console.log(`Unclaimed #${issueNumber}`);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      console.log(`Could not unclaim #${issueNumber}: ${detail}`);
+    }
+  }
+  if (plan.deleteImplementerBranches) {
+    deleteLocalImplementerBranches();
+  }
 }
 
 function ensureMainReady(): HostGate {
@@ -258,6 +320,7 @@ if (!hostGate.ok) {
       });
       if (afterImplement.action === "stop") {
         console.log("Implementation agent made no commits. Stopping (empty or blocked work).");
+        cleanupAfterFailure(issueNumber, "no-commits");
         break;
       }
 
@@ -268,6 +331,7 @@ if (!hostGate.ok) {
       } catch (error) {
         const detail = error instanceof Error ? error.message : String(error);
         console.log(`Stopping: push failed (${detail})`);
+        cleanupAfterFailure(issueNumber, "push");
         break;
       }
 
@@ -278,11 +342,13 @@ if (!hostGate.ok) {
       } catch (error) {
         const detail = error instanceof Error ? error.message : String(error);
         console.log(`Stopping: push succeeded but close failed (${detail})`);
+        cleanupAfterFailure(issueNumber, "close");
         break;
       }
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       console.log(`Stopping: implement or merge failed (${detail})`);
+      cleanupAfterFailure(issueNumber, "implement");
       break;
     }
   }

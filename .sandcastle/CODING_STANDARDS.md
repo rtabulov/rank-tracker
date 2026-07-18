@@ -61,3 +61,4 @@ Full detail: `docs/agents/domain.md`.
 - Follow `/implement` → `/tdd` → `/code-review` (see `.agents/skills/`). AFK: use default TDD seams unless the issue names others.
 - Commits: Conventional Commits and include `#N` for the issue. Run `vp run ready` before committing.
 - **Do not push or close the GitHub issue.** The host merges via Sandcastle `merge-to-head`, pushes `origin/main`, then closes `#N`.
+- On implement/no-commit failure the host unclaims `#N` and deletes leftover `sandcastle/implementer/*` branches.

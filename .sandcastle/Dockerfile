@@ -1,11 +1,5 @@
 FROM node:26-bookworm
 
-# Install the global Vite+ CLI tool (vp)
-RUN curl -fsSL https://vite.plus | bash
-
-# Ensure vp is available in the system PATH
-ENV PATH="/root/.local/bin:$PATH"
-
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
   git \
@@ -31,11 +25,13 @@ ARG AGENT_GID=1000
 RUN groupmod -o -g $AGENT_GID node && usermod -o -u $AGENT_UID -g $AGENT_GID -d /home/agent -m -l agent node
 USER ${AGENT_UID}:${AGENT_GID}
 
-# Install Cursor Agent CLI
+# Install CLIs as agent (not root) so PATH entries under /home/agent are executable.
+RUN curl -fsSL https://vite.plus | bash
 RUN curl https://cursor.com/install -fsS | bash
 
-# Add Cursor CLI to PATH
-ENV PATH="/home/agent/.local/bin:$PATH"
+# vite.plus installs to ~/.vite-plus/bin (profile-sourced); hooks use non-interactive sh,
+# so put both CLI dirs on PATH explicitly.
+ENV PATH="/home/agent/.local/bin:/home/agent/.vite-plus/bin:$PATH"
 
 WORKDIR /home/agent
 

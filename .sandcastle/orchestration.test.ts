@@ -4,6 +4,7 @@ import {
   decideAfterClaim,
   decideAfterImplement,
   decideAfterPicker,
+  decideFailureCleanup,
   evaluateHostGate,
   parsePickerSelection,
 } from "./orchestration.ts";
@@ -117,6 +118,25 @@ test("implement with commits publishes; empty work stops", () => {
   expect(decideAfterImplement({ commitCount: 0 })).toEqual({
     action: "stop",
     reason: "no-commits",
+  });
+});
+
+test("failure cleanup unclaims and drops temp branches before publish", () => {
+  expect(decideFailureCleanup("implement")).toEqual({
+    unclaim: true,
+    deleteImplementerBranches: true,
+  });
+  expect(decideFailureCleanup("no-commits")).toEqual({
+    unclaim: true,
+    deleteImplementerBranches: true,
+  });
+  expect(decideFailureCleanup("push")).toEqual({
+    unclaim: false,
+    deleteImplementerBranches: false,
+  });
+  expect(decideFailureCleanup("close")).toEqual({
+    unclaim: false,
+    deleteImplementerBranches: false,
   });
 });
 

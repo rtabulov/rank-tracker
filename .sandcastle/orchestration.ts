@@ -20,6 +20,14 @@ export type HostGate =
 
 export type ImplementDecision = { action: "publish" } | { action: "stop"; reason: "no-commits" };
 
+/** Where the iteration failed — drives host cleanup. */
+export type FailureKind = "implement" | "no-commits" | "push" | "close";
+
+export type FailureCleanup = {
+  unclaim: boolean;
+  deleteImplementerBranches: boolean;
+};
+
 function badPickerDecision(attempt: 1 | 2, detail: string): OrchestratorDecision {
   if (attempt === 1) {
     return { action: "retry-picker", reason: "bad-picker", detail };
@@ -81,6 +89,17 @@ export function decideAfterImplement(input: { commitCount: number }): ImplementD
     return { action: "stop", reason: "no-commits" };
   }
   return { action: "publish" };
+}
+
+/**
+ * Pre-publish failures should free the issue and drop merge-to-head temp branches.
+ * After a successful push, leave the claim so a human can finish close / inspect main.
+ */
+export function decideFailureCleanup(kind: FailureKind): FailureCleanup {
+  if (kind === "push" || kind === "close") {
+    return { unclaim: false, deleteImplementerBranches: false };
+  }
+  return { unclaim: true, deleteImplementerBranches: true };
 }
 
 export function buildIssueCloseComment(issueNumber: number): string {
