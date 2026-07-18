@@ -1,9 +1,10 @@
+import { APP_SCHEMA_VERSION } from "./schema.ts";
 import type { LocalStore, StorageAdapter } from "./types.ts";
 
 export const LOCAL_STORE_KEY = "rank-tracker-local-store";
 
 export function createEmptyLocalStore(): LocalStore {
-  return { version: 1, entries: [] };
+  return { version: APP_SCHEMA_VERSION, entries: [] };
 }
 
 export function parseLocalStore(raw: string | null): LocalStore {
