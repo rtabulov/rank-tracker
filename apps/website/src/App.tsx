@@ -12,11 +12,11 @@ import {
   type RouterHistory,
 } from "@tanstack/react-router";
 import { HeaderActions } from "@/components/header-actions";
-import { LocalStoreProvider } from "@/components/local-store-provider";
+import { LocalStoreProvider, useLocalStore } from "@/components/local-store-provider";
 import { SeasonView } from "@/components/season-view";
 import { ThemeHotkey } from "@/components/theme-hotkey";
 import { ThemeProvider } from "@/components/theme-provider";
-import { getCurrentSeason } from "@/lib/seasons";
+import { getCurrentSeason, isSeasonNavigable } from "@/lib/seasons";
 import type { LocalStore, StorageAdapter } from "@/lib/types";
 
 type SeasonSearch = {
@@ -81,8 +81,12 @@ function RootLayout() {
 function SeasonViewPage() {
   const navigate = useNavigate({ from: indexRoute.id });
   const search = useSearch({ from: indexRoute.id });
+  const { store } = useLocalStore();
   const currentSeason = getCurrentSeason();
-  const selectedSeason = search.season ?? currentSeason.number;
+  const requestedSeason = search.season ?? currentSeason.number;
+  const selectedSeason = isSeasonNavigable(requestedSeason, store.entries)
+    ? requestedSeason
+    : currentSeason.number;
 
   useEffect(() => {
     if (search.season === undefined) {
@@ -90,10 +94,25 @@ function SeasonViewPage() {
         search: { season: currentSeason.number },
         replace: true,
       });
+      return;
     }
-  }, [currentSeason.number, navigate, search.season]);
 
-  return <SeasonView seasonNumber={selectedSeason} />;
+    if (!isSeasonNavigable(search.season, store.entries)) {
+      void navigate({
+        search: { season: currentSeason.number },
+        replace: true,
+      });
+    }
+  }, [currentSeason.number, navigate, search.season, store.entries]);
+
+  return (
+    <SeasonView
+      seasonNumber={selectedSeason}
+      onSeasonSelect={(seasonNumber) => {
+        void navigate({ search: { season: seasonNumber } });
+      }}
+    />
+  );
 }
 
 export function App({

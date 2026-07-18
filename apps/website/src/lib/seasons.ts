@@ -103,3 +103,26 @@ export function getEntriesForSeason(entries: Entry[], seasonNumber: number): Ent
     .filter((entry) => getSeasonForTimestamp(entry.recordedAt)?.number === seasonNumber)
     .sort((a, b) => Date.parse(a.recordedAt) - Date.parse(b.recordedAt));
 }
+
+export function seasonHasEntries(entries: Entry[], seasonNumber: number): boolean {
+  return entries.some((entry) => getSeasonForTimestamp(entry.recordedAt)?.number === seasonNumber);
+}
+
+export function isSeasonNavigable(
+  seasonNumber: number,
+  entries: Entry[],
+  now = new Date(),
+): boolean {
+  const currentSeason = getCurrentSeason(now);
+  if (seasonNumber === currentSeason.number) {
+    return true;
+  }
+  return seasonHasEntries(entries, seasonNumber);
+}
+
+export function getNavigableSeasons(entries: Entry[], now = new Date()): Season[] {
+  const currentSeason = getCurrentSeason(now);
+  return SEASONS.filter(
+    (season) => season.number === currentSeason.number || seasonHasEntries(entries, season.number),
+  ).sort((a, b) => b.number - a.number);
+}

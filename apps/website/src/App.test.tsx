@@ -7,6 +7,19 @@ import { createMemoryStorageAdapter } from "./lib/local-store";
 
 const CURRENT_SEASON_NUMBER = 11;
 
+function createStoreWithSeason10Entry() {
+  return {
+    version: 1 as const,
+    entries: [
+      {
+        id: "s10-entry",
+        rs: 8000,
+        recordedAt: "2026-04-01T10:00:00.000Z",
+      },
+    ],
+  };
+}
+
 test("composed tree renders the home shell via the router under the base path", async () => {
   const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
   const router = createAppRouter({ history });
@@ -793,6 +806,80 @@ test("deleting the last Entry on Current Season shows empty Current Season state
   const raw = storageAdapter.getItem("rank-tracker-local-store");
   const store = JSON.parse(raw!) as { entries: unknown[] };
   expect(store.entries).toHaveLength(0);
+});
+
+test("season control lists Current Season and past Seasons that have Entries", async () => {
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      initialStore={createStoreWithSeason10Entry()}
+    />,
+  );
+
+  await screen.findByRole("radiogroup", { name: "Season" });
+  expect(screen.getByRole("radio", { name: "S11*" })).toBeInTheDocument();
+  expect(screen.getByRole("radio", { name: "S10" })).toBeInTheDocument();
+  expect(screen.queryByRole("radio", { name: "S9" })).not.toBeInTheDocument();
+});
+
+test("selecting a past Season updates the URL and shows that Season view", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      initialStore={createStoreWithSeason10Entry()}
+    />,
+  );
+
+  await screen.findByRole("heading", { name: /season 11 \(current\)/i });
+  await user.click(screen.getByRole("radio", { name: "S10" }));
+
+  expect(await screen.findByRole("heading", { name: /^season 10$/i })).toBeInTheDocument();
+  expect(history.location.search).toContain("season=10");
+  expect(screen.getByLabelText("Season hero")).toHaveTextContent("8,000");
+  expect(screen.getByLabelText("RS sparkline")).toBeInTheDocument();
+  expect(screen.getByLabelText("Season summary")).toBeInTheDocument();
+  expect(screen.getByText(/RS 8,000/)).toBeInTheDocument();
+  expect(screen.queryByText("(Current)")).not.toBeInTheDocument();
+});
+
+test("non-navigable Season in the URL snaps to Current Season", async () => {
+  const history = createMemoryHistory({
+    initialEntries: ["/rank-tracker/?season=9"],
+  });
+  const router = createAppRouter({ history });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      initialStore={createStoreWithSeason10Entry()}
+    />,
+  );
+
+  expect(
+    await screen.findByRole("heading", { name: /season 11 \(current\)/i }),
+  ).toBeInTheDocument();
+  expect(history.location.search).toContain(`season=${CURRENT_SEASON_NUMBER}`);
+  expect(screen.queryByRole("radio", { name: "S9" })).not.toBeInTheDocument();
+});
+
+test("empty Local store season control offers only Current Season", async () => {
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
+
+  await screen.findByRole("radio", { name: "S11*" });
+  expect(screen.queryByRole("radio", { name: "S10" })).not.toBeInTheDocument();
 });
 
 test("Local store document shape is initialized with empty entries", async () => {
