@@ -895,3 +895,169 @@ test("Local store document shape is initialized with empty entries", async () =>
   expect(raw).not.toBeNull();
   expect(JSON.parse(raw!)).toEqual({ version: 1, entries: [] });
 });
+
+test("Log RS shows live Season preview derived from recordedAt", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date("2026-07-17T12:00:00"));
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
+
+  await user.click(await screen.findByRole("button", { name: "Log RS" }));
+  await user.clear(screen.getByLabelText(/^recorded at$/i));
+  await user.type(screen.getByLabelText(/^recorded at$/i), "2026-04-01T10:00");
+
+  expect(screen.getByLabelText("Season preview")).toHaveTextContent("Season 10");
+
+  vi.useRealTimers();
+});
+
+test("Current Season Log RS with backdated recordedAt shows info chrome and navigates on save", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date("2026-07-17T12:00:00"));
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const storageAdapter = createMemoryStorageAdapter();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(<App router={router} storageAdapter={storageAdapter} />);
+
+  await user.click(await screen.findByRole("button", { name: "Log RS" }));
+  await user.clear(screen.getByLabelText(/^recorded at$/i));
+  await user.type(screen.getByLabelText(/^recorded at$/i), "2026-04-01T10:00");
+  await user.type(screen.getByLabelText(/^rs$/i), "8000");
+
+  expect(screen.getByRole("status")).toHaveTextContent("Saves to Season 10");
+
+  await user.click(screen.getByRole("button", { name: "Save" }));
+
+  expect(await screen.findByRole("heading", { name: /^season 10$/i })).toBeInTheDocument();
+  expect(history.location.search).toContain("season=10");
+  expect(screen.getByLabelText("Season hero")).toHaveTextContent("8,000");
+
+  const raw = storageAdapter.getItem("rank-tracker-local-store");
+  const store = JSON.parse(raw!) as {
+    entries: Array<{ rs: number; recordedAt: string }>;
+  };
+  expect(store.entries).toHaveLength(1);
+  expect(store.entries[0]?.rs).toBe(8000);
+  expect(store.entries[0]?.recordedAt).toMatch(/^2026-04-01T/);
+
+  vi.useRealTimers();
+});
+
+test("past Season view blocks save when recordedAt belongs to another Season", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date("2026-07-17T12:00:00"));
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const initialStore = createStoreWithSeason10Entry();
+  const storageAdapter = createMemoryStorageAdapter(initialStore);
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(<App router={router} storageAdapter={storageAdapter} initialStore={initialStore} />);
+
+  await user.click(await screen.findByRole("radio", { name: "S10" }));
+  await user.click(screen.getByRole("button", { name: "Log RS" }));
+  await user.clear(screen.getByLabelText(/^recorded at$/i));
+  await user.type(screen.getByLabelText(/^recorded at$/i), "2026-07-16T10:00");
+  await user.type(screen.getByLabelText(/^rs$/i), "9000");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+
+  expect(screen.getByRole("alert")).toHaveTextContent(/not the Season you're viewing/i);
+  expect(screen.getByRole("dialog", { name: "Log RS" })).toBeInTheDocument();
+  expect(JSON.parse(storageAdapter.getItem("rank-tracker-local-store")!)).toEqual(initialStore);
+
+  vi.useRealTimers();
+});
+
+test("recordedAt outside every known Season rejects save and leaves Local store unchanged", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date("2026-07-17T12:00:00"));
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const storageAdapter = createMemoryStorageAdapter();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(<App router={router} storageAdapter={storageAdapter} />);
+
+  await user.click(await screen.findByRole("button", { name: "Log RS" }));
+  await user.clear(screen.getByLabelText(/^recorded at$/i));
+  await user.type(screen.getByLabelText(/^recorded at$/i), "2020-01-01T10:00");
+  await user.type(screen.getByLabelText(/^rs$/i), "5000");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+
+  expect(screen.getByLabelText("Season preview")).toHaveTextContent("Outside known Seasons");
+  expect(screen.getByRole("alert")).toHaveTextContent(/outside every known Season/i);
+  expect(screen.getByRole("dialog", { name: "Log RS" })).toBeInTheDocument();
+  expect(JSON.parse(storageAdapter.getItem("rank-tracker-local-store")!)).toEqual({
+    version: 1,
+    entries: [],
+  });
+
+  vi.useRealTimers();
+});
+
+test("Edit Entry applies cross-Season rules on past Season mismatch", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date("2026-07-17T12:00:00"));
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const initialStore = createStoreWithSeason10Entry();
+  const storageAdapter = createMemoryStorageAdapter(initialStore);
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(<App router={router} storageAdapter={storageAdapter} initialStore={initialStore} />);
+
+  await user.click(await screen.findByRole("radio", { name: "S10" }));
+  await user.click(screen.getByRole("button", { name: "Edit s10-entry" }));
+  await user.clear(screen.getByLabelText(/^recorded at$/i));
+  await user.type(screen.getByLabelText(/^recorded at$/i), "2026-07-16T10:00");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+
+  expect(screen.getByRole("alert")).toHaveTextContent(/not the Season you're viewing/i);
+  expect(screen.getByRole("dialog", { name: "Edit Entry" })).toBeInTheDocument();
+  expect(JSON.parse(storageAdapter.getItem("rank-tracker-local-store")!)).toEqual(initialStore);
+
+  vi.useRealTimers();
+});
+
+test("Edit Entry from Current Season with cross-Season recordedAt navigates on save", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date("2026-07-17T12:00:00"));
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const initialStore = {
+    version: 1 as const,
+    entries: [
+      {
+        id: "s11-entry",
+        rs: 42000,
+        recordedAt: "2026-07-16T10:00:00.000Z",
+      },
+    ],
+  };
+  const storageAdapter = createMemoryStorageAdapter(initialStore);
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(<App router={router} storageAdapter={storageAdapter} initialStore={initialStore} />);
+
+  await user.click(await screen.findByRole("button", { name: "Edit s11-entry" }));
+  await user.clear(screen.getByLabelText(/^recorded at$/i));
+  await user.type(screen.getByLabelText(/^recorded at$/i), "2026-04-01T10:00");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+
+  expect(await screen.findByRole("heading", { name: /^season 10$/i })).toBeInTheDocument();
+  expect(history.location.search).toContain("season=10");
+  expect(screen.getByText(/RS 42,000/)).toBeInTheDocument();
+
+  const store = JSON.parse(storageAdapter.getItem("rank-tracker-local-store")!) as {
+    entries: Array<{ id: string; recordedAt: string }>;
+  };
+  expect(store.entries[0]?.id).toBe("s11-entry");
+  expect(store.entries[0]?.recordedAt).toMatch(/^2026-04-01T/);
+
+  vi.useRealTimers();
+});

@@ -1,11 +1,13 @@
 import { useForm } from "@tanstack/react-form";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { EntrySeasonChrome } from "@/components/entry-season-chrome";
 import { ViewportOverlay } from "@/components/viewport-overlay";
 import { createEntry } from "@/lib/entries";
+import { assessEntrySeasonSave } from "@/lib/entry-season-save";
 import { entryRsFormSchema } from "@/lib/entry-form-schema";
 import { fromDatetimeLocalValue, toDatetimeLocalValue } from "@/lib/format";
-import { getSeasonForTimestamp } from "@/lib/seasons";
+import { getCurrentSeason } from "@/lib/seasons";
 import type { Entry } from "@/lib/types";
 
 type EditEntryOverlayProps = {
@@ -25,6 +27,8 @@ export function EditEntryOverlay({
   onSaved,
   onDeleteRequest,
 }: EditEntryOverlayProps) {
+  const currentSeasonNumber = getCurrentSeason().number;
+
   const form = useForm({
     defaultValues: {
       rs: String(entry.rs),
@@ -35,8 +39,8 @@ export function EditEntryOverlay({
     },
     onSubmit: async ({ value }) => {
       const recordedAt = fromDatetimeLocalValue(value.recordedAtLocal);
-      const derivedSeason = getSeasonForTimestamp(recordedAt);
-      if (derivedSeason === null || derivedSeason.number !== seasonNumber) {
+      const assessment = assessEntrySeasonSave(recordedAt, seasonNumber, currentSeasonNumber);
+      if (!assessment.saveAllowed) {
         return;
       }
 
@@ -118,6 +122,18 @@ export function EditEntryOverlay({
             </div>
           )}
         </form.Field>
+
+        <form.Subscribe selector={(state) => state.values.recordedAtLocal}>
+          {(recordedAtLocal) => (
+            <EntrySeasonChrome
+              assessment={assessEntrySeasonSave(
+                fromDatetimeLocalValue(recordedAtLocal),
+                seasonNumber,
+                currentSeasonNumber,
+              )}
+            />
+          )}
+        </form.Subscribe>
 
         <div className="flex flex-col gap-2">
           <Button type="submit">Save</Button>

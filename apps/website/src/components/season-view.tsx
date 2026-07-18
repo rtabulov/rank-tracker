@@ -15,6 +15,7 @@ import {
   getEntriesForSeason,
   getNavigableSeasons,
   getSeasonByNumber,
+  getSeasonForTimestamp,
 } from "@/lib/seasons";
 
 type SeasonViewProps = {
@@ -169,6 +170,10 @@ export function SeasonView({ seasonNumber, onSeasonSelect }: SeasonViewProps) {
         onClose={() => setLogRsOpen(false)}
         onSaved={(entry) => {
           setStore({ ...store, entries: addEntry(store.entries, entry) });
+          const targetSeason = getSeasonForTimestamp(entry.recordedAt);
+          if (targetSeason !== null && targetSeason.number !== season.number) {
+            onSeasonSelect(targetSeason.number);
+          }
         }}
       />
 
@@ -180,6 +185,10 @@ export function SeasonView({ seasonNumber, onSeasonSelect }: SeasonViewProps) {
           onClose={() => setEditingEntry(null)}
           onSaved={(entry) => {
             setStore({ ...store, entries: updateEntry(store.entries, entry.id, entry) });
+            const targetSeason = getSeasonForTimestamp(entry.recordedAt);
+            if (targetSeason !== null && targetSeason.number !== season.number) {
+              onSeasonSelect(targetSeason.number);
+            }
           }}
           onDeleteRequest={() => {
             setDeletingEntry(editingEntry);

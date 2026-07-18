@@ -20,5 +20,9 @@ export function toDatetimeLocalValue(date: Date): string {
 }
 
 export function fromDatetimeLocalValue(value: string): string {
-  return new Date(value).toISOString();
+  const instant = Date.parse(value);
+  if (Number.isNaN(instant)) {
+    return "";
+  }
+  return new Date(instant).toISOString();
 }
