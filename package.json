@@ -8,7 +8,7 @@
     "dev": "vp run website#dev",
     "prepare": "vp config",
     "test": "vp test",
-    "sandcastle": "vp exec tsx .sandcastle/main.ts"
+    "sandcastle": "vp exec sandcastle docker build-image && vp exec tsx .sandcastle/main.ts"
   },
   "devDependencies": {
     "@ai-hero/sandcastle": "catalog:",
