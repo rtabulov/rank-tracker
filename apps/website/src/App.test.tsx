@@ -1,7 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryHistory } from "@tanstack/react-router";
-import { expect, test } from "vite-plus/test";
+import { expect, test, vi } from "vite-plus/test";
 import { App, createAppRouter } from "./App.tsx";
 import { createMemoryStorageAdapter } from "./lib/local-store";
 
@@ -27,6 +27,45 @@ test("composed tree renders the home shell via the router under the base path", 
   render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
 
   expect(await screen.findByRole("heading", { name: "Rank Tracker" })).toBeInTheDocument();
+});
+
+test("D hotkey cycles explicit light and dark on the document", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
+
+  expect(await screen.findByRole("heading", { name: "Rank Tracker" })).toBeInTheDocument();
+
+  await user.click(screen.getByRole("button", { name: /toggle theme/i }));
+  await user.click(screen.getByRole("menuitem", { name: /^dark$/i }));
+  expect(document.documentElement).toHaveClass("dark");
+
+  await user.keyboard("{d}");
+  expect(document.documentElement).toHaveClass("light");
+  expect(document.documentElement).not.toHaveClass("dark");
+
+  await user.keyboard("{d}");
+  expect(document.documentElement).toHaveClass("dark");
+  expect(document.documentElement).not.toHaveClass("light");
+});
+
+test("D hotkey from system theme sets an explicit light or dark theme", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
+
+  expect(await screen.findByRole("heading", { name: "Rank Tracker" })).toBeInTheDocument();
+  expect(document.documentElement).toHaveClass("light");
+  expect(document.documentElement).not.toHaveClass("dark");
+
+  await user.keyboard("{d}");
+  expect(document.documentElement).toHaveClass("dark");
+  expect(document.documentElement).not.toHaveClass("light");
+  expect(window.localStorage.getItem("vite-ui-theme")).toBe("dark");
 });
 
 test("toggling theme updates effective light/dark on the document", async () => {
@@ -168,6 +207,9 @@ test("saving Log RS persists Entry and shows populated Current Season view", asy
 });
 
 test("populated Current Season with one Entry omits sparse summary metrics", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date("2026-07-17T12:00:00"));
+
   const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
   const router = createAppRouter({ history });
 
@@ -196,6 +238,8 @@ test("populated Current Season with one Entry omits sparse summary metrics", asy
   expect(screen.queryByText("Δ last 7 days")).not.toBeInTheDocument();
   expect(summary).toHaveTextContent("Days since last Entry");
   expect(summary).toHaveTextContent("2");
+
+  vi.useRealTimers();
 });
 
 test("Entries survive remount via the Local store", async () => {
@@ -249,6 +293,519 @@ test("Log RS overlay uses drawer chrome on narrow viewports", async () => {
     "data-overlay-variant",
     "drawer",
   );
+});
+
+test("Import success replaces Local store and refreshes Season view", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const storageAdapter = createMemoryStorageAdapter({
+    version: 1,
+    entries: [],
+  });
+
+  render(<App router={router} storageAdapter={storageAdapter} />);
+
+  await screen.findByText("No Entries yet.");
+
+  const importDocument = {
+    version: 1,
+    entries: [
+      {
+        id: "imported-entry-1",
+        rs: 55000,
+        recordedAt: "2026-07-16T10:00:00.000Z",
+      },
+    ],
+  };
+  const file = new File([JSON.stringify(importDocument)], "backup.json", {
+    type: "application/json",
+  });
+
+  await user.click(await screen.findByRole("button", { name: "Data" }));
+  const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+  await user.upload(fileInput, file);
+
+  expect(await screen.findByRole("dialog", { name: "Import" })).toBeInTheDocument();
+  expect(screen.getByText(/replace your current Local store/i)).toBeInTheDocument();
+
+  await user.click(screen.getByRole("button", { name: "Replace" }));
+
+  expect(screen.queryByRole("dialog", { name: "Import" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("dialog", { name: "Data" })).not.toBeInTheDocument();
+  expect(await screen.findByLabelText("Season hero")).toHaveTextContent("55,000");
+  expect(screen.getByText(/RS 55,000/i)).toBeInTheDocument();
+
+  const raw = storageAdapter.getItem("rank-tracker-local-store");
+  expect(JSON.parse(raw!)).toEqual(importDocument);
+});
+
+test("Import failure leaves Local store unchanged and shows category error on Data", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const initialStore = {
+    version: 1,
+    entries: [
+      {
+        id: "keep-me",
+        rs: 12000,
+        recordedAt: "2026-07-16T10:00:00.000Z",
+      },
+    ],
+  };
+  const storageAdapter = createMemoryStorageAdapter(initialStore);
+
+  render(<App router={router} storageAdapter={storageAdapter} initialStore={initialStore} />);
+
+  await screen.findByLabelText("Season hero");
+
+  const file = new File(["not-json"], "bad.json", { type: "application/json" });
+  await user.click(screen.getByRole("button", { name: "Data" }));
+  const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+  await user.upload(fileInput, file);
+
+  expect(await screen.findByText("Invalid JSON.")).toBeInTheDocument();
+  expect(screen.getByRole("dialog", { name: "Data" })).toBeInTheDocument();
+  expect(JSON.parse(storageAdapter.getItem("rank-tracker-local-store")!)).toEqual(initialStore);
+  expect(screen.getByLabelText("Season hero")).toHaveTextContent("12,000");
+});
+
+test("Import rejects duplicate Entry ids without changing Local store", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const initialStore = {
+    version: 1,
+    entries: [
+      {
+        id: "keep-me",
+        rs: 12000,
+        recordedAt: "2026-07-16T10:00:00.000Z",
+      },
+    ],
+  };
+  const storageAdapter = createMemoryStorageAdapter(initialStore);
+
+  render(<App router={router} storageAdapter={storageAdapter} initialStore={initialStore} />);
+
+  await screen.findByLabelText("Season hero");
+
+  const importDocument = {
+    version: 1,
+    entries: [
+      { id: "dup", rs: 1000, recordedAt: "2026-07-10T10:00:00.000Z" },
+      { id: "dup", rs: 2000, recordedAt: "2026-07-11T10:00:00.000Z" },
+    ],
+  };
+  const file = new File([JSON.stringify(importDocument)], "dup.json", {
+    type: "application/json",
+  });
+
+  await user.click(screen.getByRole("button", { name: "Data" }));
+  await user.upload(document.querySelector('input[type="file"]') as HTMLInputElement, file);
+
+  expect(await screen.findByText("Wrong file shape.")).toBeInTheDocument();
+  expect(JSON.parse(storageAdapter.getItem("rank-tracker-local-store")!)).toEqual(initialStore);
+});
+
+test("Import migrates lower version and replaces Local store", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const storageAdapter = createMemoryStorageAdapter({ version: 1, entries: [] });
+
+  render(<App router={router} storageAdapter={storageAdapter} />);
+
+  await screen.findByText("No Entries yet.");
+
+  const importDocument = {
+    version: 0,
+    entries: [
+      {
+        id: "migrated-entry-1",
+        rs: 42000,
+        recordedAt: "2026-07-16T10:00:00.000Z",
+      },
+    ],
+  };
+  const file = new File([JSON.stringify(importDocument)], "legacy.json", {
+    type: "application/json",
+  });
+
+  await user.click(await screen.findByRole("button", { name: "Data" }));
+  await user.upload(document.querySelector('input[type="file"]') as HTMLInputElement, file);
+  await user.click(await screen.findByRole("button", { name: "Replace" }));
+
+  expect(await screen.findByLabelText("Season hero")).toHaveTextContent("42,000");
+  expect(JSON.parse(storageAdapter.getItem("rank-tracker-local-store")!)).toEqual({
+    version: 1,
+    entries: importDocument.entries,
+  });
+});
+
+test("Import ignores unknown fields and persists only Local store shape", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const storageAdapter = createMemoryStorageAdapter({ version: 1, entries: [] });
+
+  render(<App router={router} storageAdapter={storageAdapter} />);
+
+  await screen.findByText("No Entries yet.");
+
+  const importDocument = {
+    version: 1,
+    exportedAt: "2026-07-17T12:00:00.000Z",
+    entries: [
+      {
+        id: "imported-entry-1",
+        rs: 55000,
+        recordedAt: "2026-07-16T10:00:00.000Z",
+        notes: "ignore me",
+      },
+    ],
+  };
+  const file = new File([JSON.stringify(importDocument)], "forward-compat.json", {
+    type: "application/json",
+  });
+
+  await user.click(await screen.findByRole("button", { name: "Data" }));
+  await user.upload(document.querySelector('input[type="file"]') as HTMLInputElement, file);
+  await user.click(await screen.findByRole("button", { name: "Replace" }));
+
+  expect(JSON.parse(storageAdapter.getItem("rank-tracker-local-store")!)).toEqual({
+    version: 1,
+    entries: [
+      {
+        id: "imported-entry-1",
+        rs: 55000,
+        recordedAt: "2026-07-16T10:00:00.000Z",
+      },
+    ],
+  });
+});
+
+test("Import rejects unsupported version without changing Local store", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const initialStore = { version: 1, entries: [] };
+  const storageAdapter = createMemoryStorageAdapter(initialStore);
+
+  render(<App router={router} storageAdapter={storageAdapter} initialStore={initialStore} />);
+
+  await screen.findByText("No Entries yet.");
+
+  const importDocument = { version: 99, entries: [] };
+  const file = new File([JSON.stringify(importDocument)], "future.json", {
+    type: "application/json",
+  });
+
+  await user.click(screen.getByRole("button", { name: "Data" }));
+  await user.upload(document.querySelector('input[type="file"]') as HTMLInputElement, file);
+
+  expect(await screen.findByText("Unsupported version.")).toBeInTheDocument();
+  expect(JSON.parse(storageAdapter.getItem("rank-tracker-local-store")!)).toEqual(initialStore);
+});
+
+test("Export blocked download shows failure line on Data", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const createObjectURLSpy = vi.spyOn(URL, "createObjectURL").mockImplementation(() => {
+    throw new Error("blocked");
+  });
+
+  render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
+
+  await user.click(await screen.findByRole("button", { name: "Data" }));
+  await user.click(screen.getByRole("button", { name: "Export" }));
+
+  expect(await screen.findByText(/export failed/i)).toBeInTheDocument();
+
+  createObjectURLSpy.mockRestore();
+});
+
+test("Export downloads Local store JSON with dated filename", async () => {
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const initialStore = {
+    version: 1,
+    entries: [
+      {
+        id: "export-entry-1",
+        rs: 33000,
+        recordedAt: "2026-07-15T10:00:00.000Z",
+      },
+    ],
+  };
+
+  const createObjectURLSpy = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test");
+  const revokeObjectURLSpy = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+  const click = vi.fn();
+  let downloadedFilename = "";
+  const originalCreateElement = document.createElement.bind(document);
+  const createElementSpy = vi
+    .spyOn(document, "createElement")
+    .mockImplementation((tagName, options) => {
+      if (tagName === "a") {
+        return {
+          get download() {
+            return downloadedFilename;
+          },
+          set download(value: string) {
+            downloadedFilename = value;
+          },
+          href: "",
+          click,
+        } as unknown as HTMLAnchorElement;
+      }
+      return originalCreateElement(tagName, options);
+    });
+
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date("2026-07-17T12:00:00"));
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter(initialStore)}
+      initialStore={initialStore}
+    />,
+  );
+
+  await user.click(await screen.findByRole("button", { name: "Data" }));
+  await user.click(screen.getByRole("button", { name: "Export" }));
+
+  expect(createObjectURLSpy).toHaveBeenCalled();
+  const firstCall = createObjectURLSpy.mock.calls[0];
+  expect(firstCall).toBeDefined();
+  const blob = firstCall![0] as Blob;
+  expect(blob.type).toBe("application/json");
+  const exported = JSON.parse(await blob.text()) as typeof initialStore;
+  expect(exported).toEqual(initialStore);
+
+  expect(downloadedFilename).toBe("rank-tracker-export-2026-07-17.json");
+  expect(click).toHaveBeenCalled();
+
+  createElementSpy.mockRestore();
+  createObjectURLSpy.mockRestore();
+  revokeObjectURLSpy.mockRestore();
+  vi.useRealTimers();
+});
+
+test("header gear opens Data sheet with Export and Import only", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
+
+  await user.click(await screen.findByRole("button", { name: "Data" }));
+
+  expect(await screen.findByRole("dialog", { name: "Data" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Export" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Import" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
+});
+
+test("Edit on an Entry row opens Edit overlay with editable rs and recordedAt", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      initialStore={{
+        version: 1,
+        entries: [
+          {
+            id: "entry-edit-1",
+            rs: 42000,
+            recordedAt: "2026-07-15T10:00:00.000Z",
+          },
+        ],
+      }}
+    />,
+  );
+
+  await user.click(await screen.findByRole("button", { name: "Edit entry-edit-1" }));
+
+  expect(await screen.findByRole("dialog", { name: "Edit Entry" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Delete" })).toBeInTheDocument();
+  expect(screen.getByLabelText(/^rs$/i)).toHaveValue("42000");
+  expect(screen.getByLabelText(/^recorded at$/i)).toBeInTheDocument();
+});
+
+test("saving Edit Entry persists changes with stable id", async () => {
+  const user = userEvent.setup();
+  const storageAdapter = createMemoryStorageAdapter();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={storageAdapter}
+      initialStore={{
+        version: 1,
+        entries: [
+          {
+            id: "entry-edit-1",
+            rs: 42000,
+            recordedAt: "2026-07-15T10:00:00.000Z",
+          },
+        ],
+      }}
+    />,
+  );
+
+  await user.click(await screen.findByRole("button", { name: "Edit entry-edit-1" }));
+  await user.clear(screen.getByLabelText(/^rs$/i));
+  await user.type(screen.getByLabelText(/^rs$/i), "45000");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+
+  expect(await screen.findByLabelText("Season hero")).toHaveTextContent("45,000");
+  expect(screen.queryByRole("dialog", { name: "Edit Entry" })).not.toBeInTheDocument();
+
+  const raw = storageAdapter.getItem("rank-tracker-local-store");
+  const store = JSON.parse(raw!) as {
+    version: number;
+    entries: Array<{ id: string; rs: number; recordedAt: string }>;
+  };
+  expect(store.entries).toHaveLength(1);
+  expect(store.entries[0]?.id).toBe("entry-edit-1");
+  expect(store.entries[0]?.rs).toBe(45000);
+});
+
+test("Delete confirm from Entry row hard-deletes and refreshes Season view", async () => {
+  const user = userEvent.setup();
+  const storageAdapter = createMemoryStorageAdapter();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={storageAdapter}
+      initialStore={{
+        version: 1,
+        entries: [
+          {
+            id: "entry-a",
+            rs: 42000,
+            recordedAt: "2026-07-15T10:00:00.000Z",
+          },
+          {
+            id: "entry-b",
+            rs: 43000,
+            recordedAt: "2026-07-16T10:00:00.000Z",
+          },
+        ],
+      }}
+    />,
+  );
+
+  await user.click(await screen.findByRole("button", { name: "Delete entry-a" }));
+
+  const dialog = await screen.findByRole("dialog", { name: "Delete Entry" });
+  expect(within(dialog).getByText(/RS 42,000/i)).toBeInTheDocument();
+  expect(within(dialog).getByRole("button", { name: "Delete" })).toBeInTheDocument();
+
+  await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+  expect(screen.queryByRole("dialog", { name: "Delete Entry" })).not.toBeInTheDocument();
+  expect(screen.queryByText(/RS 42,000/i)).not.toBeInTheDocument();
+  expect(screen.getByText(/RS 43,000/i)).toBeInTheDocument();
+
+  const raw = storageAdapter.getItem("rank-tracker-local-store");
+  const store = JSON.parse(raw!) as {
+    entries: Array<{ id: string }>;
+  };
+  expect(store.entries).toHaveLength(1);
+  expect(store.entries[0]?.id).toBe("entry-b");
+});
+
+test("Delete from Edit replaces Edit overlay and dismiss returns to Season view", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      initialStore={{
+        version: 1,
+        entries: [
+          {
+            id: "entry-edit-1",
+            rs: 42000,
+            recordedAt: "2026-07-15T10:00:00.000Z",
+          },
+        ],
+      }}
+    />,
+  );
+
+  await user.click(await screen.findByRole("button", { name: "Edit entry-edit-1" }));
+  expect(await screen.findByRole("dialog", { name: "Edit Entry" })).toBeInTheDocument();
+
+  await user.click(screen.getByRole("button", { name: "Delete" }));
+
+  expect(screen.queryByRole("dialog", { name: "Edit Entry" })).not.toBeInTheDocument();
+  const dialog = await screen.findByRole("dialog", { name: "Delete Entry" });
+  expect(dialog).toBeInTheDocument();
+
+  await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+
+  expect(screen.queryByRole("dialog", { name: "Delete Entry" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("dialog", { name: "Edit Entry" })).not.toBeInTheDocument();
+  expect(screen.getByLabelText("Season hero")).toHaveTextContent("42,000");
+});
+
+test("deleting the last Entry on Current Season shows empty Current Season state", async () => {
+  const user = userEvent.setup();
+  const storageAdapter = createMemoryStorageAdapter();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={storageAdapter}
+      initialStore={{
+        version: 1,
+        entries: [
+          {
+            id: "entry-only",
+            rs: 42000,
+            recordedAt: "2026-07-15T10:00:00.000Z",
+          },
+        ],
+      }}
+    />,
+  );
+
+  await user.click(await screen.findByRole("button", { name: "Delete entry-only" }));
+  const dialog = await screen.findByRole("dialog", { name: "Delete Entry" });
+  await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+  expect(screen.queryByRole("dialog", { name: "Delete Entry" })).not.toBeInTheDocument();
+  expect(screen.getByLabelText("No RS logged")).toHaveTextContent("—");
+  expect(screen.getByText("Log your first RS to get started.")).toBeInTheDocument();
+  expect(screen.queryByLabelText("RS sparkline")).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("Season summary")).not.toBeInTheDocument();
+  expect(screen.getByText("No Entries yet.")).toBeInTheDocument();
+
+  const raw = storageAdapter.getItem("rank-tracker-local-store");
+  const store = JSON.parse(raw!) as { entries: unknown[] };
+  expect(store.entries).toHaveLength(0);
 });
 
 test("season control lists Current Season and past Seasons that have Entries", async () => {
