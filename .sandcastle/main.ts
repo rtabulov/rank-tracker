@@ -37,11 +37,18 @@ const IMPLEMENTER_BRANCH_PREFIX = "sandcastle/implementer/";
 const MAX_ITERATIONS = 10;
 const AGENT_MODEL = "composer-latest";
 
+// pnpm refuses to purge a copied node_modules without a TTY unless CI=true
+// (ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY). Full install can exceed the
+// default 60s hook timeout on a cold cache.
 const hooks = {
-  sandbox: { onSandboxReady: [{ command: "vp install" }] },
+  sandbox: {
+    onSandboxReady: [{ command: "vp install", timeoutMs: 300_000 }],
+  },
 };
 
 const copyToWorktree = ["node_modules"];
+
+const dockerSandbox = docker({ env: { CI: "true" } });
 
 // ---------------------------------------------------------------------------
 // Host helpers (impure)
@@ -304,7 +311,7 @@ if (!hostGate.ok) {
         name: "implementer",
         maxIterations: 1,
         agent: sandcastle.cursor(AGENT_MODEL),
-        sandbox: docker(),
+        sandbox: dockerSandbox,
         branchStrategy: { type: "merge-to-head" },
         hooks,
         copyToWorktree,
