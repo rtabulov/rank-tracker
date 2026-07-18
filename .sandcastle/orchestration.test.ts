@@ -121,7 +121,7 @@ test("implement with commits publishes; empty work stops", () => {
   });
 });
 
-test("failure cleanup unclaims and drops temp branches before publish", () => {
+test("failure cleanup unclaims and drops local+remote temp branches before publish", () => {
   expect(decideFailureCleanup("implement")).toEqual({
     unclaim: true,
     deleteImplementerBranches: true,

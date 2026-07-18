@@ -101,30 +101,67 @@ function unclaimIssue(issueNumber: number) {
   });
 }
 
-function listLocalImplementerBranches(): string[] {
-  const out = execFileSync(
-    "git",
-    ["for-each-ref", "--format=%(refname:short)", `refs/heads/${IMPLEMENTER_BRANCH_PREFIX}`],
-    { encoding: "utf8" },
-  );
+function listRefNames(args: string[]): string[] {
+  const out = execFileSync("git", ["for-each-ref", "--format=%(refname:short)", ...args], {
+    encoding: "utf8",
+  });
   return out
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
 }
 
-function deleteLocalImplementerBranches() {
+function listLocalImplementerBranches(): string[] {
+  return listRefNames([`refs/heads/${IMPLEMENTER_BRANCH_PREFIX}`]);
+}
+
+function listRemoteImplementerBranches(): string[] {
+  // Ask the remote directly so stale fetch refs don't hide leftovers.
+  const out = execFileSync(
+    "git",
+    ["ls-remote", "--heads", "origin", `${IMPLEMENTER_BRANCH_PREFIX}*`],
+    { encoding: "utf8" },
+  );
+  return out
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((line) => {
+      const ref = line.split("\t")[1] ?? "";
+      return ref.replace(/^refs\/heads\//, "");
+    })
+    .filter((branch) => branch.startsWith(IMPLEMENTER_BRANCH_PREFIX));
+}
+
+function deleteImplementerBranches() {
   for (const branch of listLocalImplementerBranches()) {
     try {
       execFileSync("git", ["branch", "-D", branch], {
         encoding: "utf8",
         stdio: ["ignore", "pipe", "pipe"],
       });
-      console.log(`Deleted leftover branch ${branch}`);
+      console.log(`Deleted leftover local branch ${branch}`);
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
-      console.log(`Could not delete ${branch}: ${detail}`);
+      console.log(`Could not delete local ${branch}: ${detail}`);
     }
+  }
+
+  const remoteBranches = listRemoteImplementerBranches();
+  if (remoteBranches.length === 0) {
+    return;
+  }
+  try {
+    execFileSync("git", ["push", "origin", "--delete", ...remoteBranches], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    for (const branch of remoteBranches) {
+      console.log(`Deleted leftover remote branch origin/${branch}`);
+    }
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    console.log(`Could not delete remote implementer branches: ${detail}`);
   }
 }
 
@@ -140,7 +177,7 @@ function cleanupAfterFailure(issueNumber: number, kind: FailureKind) {
     }
   }
   if (plan.deleteImplementerBranches) {
-    deleteLocalImplementerBranches();
+    deleteImplementerBranches();
   }
 }
 

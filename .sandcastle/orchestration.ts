@@ -92,8 +92,9 @@ export function decideAfterImplement(input: { commitCount: number }): ImplementD
 }
 
 /**
- * Pre-publish failures should free the issue and drop merge-to-head temp branches.
- * After a successful push, leave the claim so a human can finish close / inspect main.
+ * Pre-publish failures should free the issue and drop merge-to-head temp branches
+ * (local and origin). After a successful push, leave the claim so a human can
+ * finish close / inspect main.
  */
 export function decideFailureCleanup(kind: FailureKind): FailureCleanup {
   if (kind === "push" || kind === "close") {
