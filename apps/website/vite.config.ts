@@ -13,7 +13,7 @@ export default defineConfig(({ mode }) => {
   }
 
   return {
-    base: "/rank-tracker/",
+    base: "/",
     plugins: lazyPlugins(async () => {
       const { default: react, reactCompilerPreset } = await import("@vitejs/plugin-react");
       const { default: babel } = await import("@rolldown/plugin-babel");

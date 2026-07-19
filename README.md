@@ -2,7 +2,7 @@
 
 A personal Rank Score (RS) history for [The Finals](https://www.reachthefinals.com/) ranked play. Log RS after sessions, review progress per Season, and back up your data locally.
 
-**Live app:** [rtabulov.github.io/rank-tracker](https://rtabulov.github.io/rank-tracker/)
+**Live app:** [rank.rtabulov.dev](https://rank.rtabulov.dev/)
 
 ## Features
 

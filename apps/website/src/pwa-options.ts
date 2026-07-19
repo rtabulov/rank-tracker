@@ -8,8 +8,8 @@ export const websitePwaOptions = {
     name: "Rank Tracker",
     short_name: "Rank Tracker",
     description: "Rank Tracker",
-    start_url: "/rank-tracker/",
-    scope: "/rank-tracker/",
+    start_url: "/",
+    scope: "/",
     display: "standalone",
     background_color: "#ffffff",
     theme_color: "#ffffff",
@@ -37,6 +37,6 @@ export const websitePwaOptions = {
   workbox: {
     // Shell precache only — no API/offline data runtime routes.
     runtimeCaching: [],
-    navigateFallback: "/rank-tracker/index.html",
+    navigateFallback: "/index.html",
   },
 } satisfies Partial<VitePWAOptions>;
