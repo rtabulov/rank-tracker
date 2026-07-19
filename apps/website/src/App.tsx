@@ -130,7 +130,7 @@ function RootLayout() {
         <div className="relative z-10 flex flex-1 flex-col">
           <Outlet />
         </div>
-        <footer className="relative z-10 mx-auto w-full max-w-lg px-4 pb-28 pt-2">
+        <footer className="relative z-0 mx-auto w-full max-w-lg px-4 pb-28 pt-2">
           <nav
             aria-label="Project links"
             className="flex items-center justify-center gap-3 font-sans text-xs text-muted-foreground"

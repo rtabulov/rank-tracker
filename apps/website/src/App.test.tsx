@@ -86,6 +86,48 @@ test("global footer links Source and Report a problem in a new tab", async () =>
   );
 });
 
+/** Tailwind z-* on the direct shell child that owns `el` (competing stacking contexts). */
+function shellChildTailwindZ(shell: Element, el: Element): number {
+  let current: Element | null = el;
+  while (current.parentElement && current.parentElement !== shell) {
+    current = current.parentElement;
+  }
+  if (current.parentElement !== shell) {
+    throw new Error("element is not under shell");
+  }
+  const match = [...current.classList].find((c) => /^z-(\d+)$/.test(c));
+  return match ? Number(/^z-(\d+)$/.exec(match)?.[1]) : 0;
+}
+
+test("Log RS stacks above the project-links footer and stays actionable", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/"] });
+  const router = createAppRouter({ history });
+
+  render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
+
+  expect(
+    await screen.findByRole("heading", { name: /season 11 \(current\)/i }),
+  ).toBeInTheDocument();
+
+  const logRs = screen.getByRole("button", { name: "Log RS" });
+  const footer = screen.getByRole("contentinfo");
+  const shell = footer.parentElement;
+  expect(shell).not.toBeNull();
+
+  // jsdom has no elementFromPoint; assert the shell stacking contexts instead.
+  expect(shellChildTailwindZ(shell!, logRs)).toBe(10);
+  expect(shellChildTailwindZ(shell!, footer)).toBe(0);
+
+  // Footer still reserves sticky-CTA clearance so content is not under Log RS.
+  expect(footer.className.split(/\s+/)).toEqual(expect.arrayContaining(["pb-28"]));
+  expect(screen.getByRole("link", { name: "Source" })).toBeVisible();
+  expect(screen.getByRole("link", { name: "Report a problem" })).toBeVisible();
+
+  await user.click(logRs);
+  expect(await screen.findByRole("dialog", { name: "Log RS" })).toBeInTheDocument();
+});
+
 test("D hotkey cycles explicit light and dark on the document", async () => {
   const user = userEvent.setup();
   const history = createMemoryHistory({ initialEntries: ["/"] });
