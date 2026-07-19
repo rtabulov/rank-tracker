@@ -4,10 +4,35 @@ import { createMemoryHistory } from "@tanstack/react-router";
 import { expect, test, vi } from "vite-plus/test";
 import { App, createAppRouter } from "./App.tsx";
 import { createMemoryAuthClient } from "./lib/auth";
+import { createMemoryProfileClient } from "./lib/profile";
 import { createMemoryStorageAdapter } from "./lib/local-store";
 import { APP_SCHEMA_VERSION } from "./lib/schema";
 
 const CURRENT_SEASON_NUMBER = 11;
+
+function createSignedInClients(input?: {
+  userId?: string;
+  email?: string | null;
+  displayName?: string | null;
+  takenDisplayNames?: string[];
+}) {
+  const userId = input?.userId ?? "player-1";
+  const email = input?.email === undefined ? "player@example.com" : input.email;
+  const authClient = createMemoryAuthClient({ userId, email });
+  const profileClient = createMemoryProfileClient({
+    profiles:
+      input?.displayName === undefined
+        ? undefined
+        : {
+            [userId]:
+              input.displayName === null
+                ? { displayName: null, isPublic: false }
+                : { displayName: input.displayName, isPublic: false },
+          },
+    takenDisplayNames: input?.takenDisplayNames,
+  });
+  return { authClient, profileClient };
+}
 
 function entryFixture(input: { id: string; rs: number; recordedAt: string; updatedAt?: string }) {
   return {
@@ -721,22 +746,21 @@ test("restored session shows signed-in state and Sign out in Data sheet", async 
   const user = userEvent.setup();
   const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
   const router = createAppRouter({ history });
+  const { authClient, profileClient } = createSignedInClients({ displayName: "FinalsFan" });
 
   render(
     <App
       router={router}
       storageAdapter={createMemoryStorageAdapter()}
-      authClient={createMemoryAuthClient({
-        userId: "player-1",
-        email: "player@example.com",
-      })}
+      authClient={authClient}
+      profileClient={profileClient}
     />,
   );
 
   await user.click(await screen.findByRole("button", { name: "Data" }));
   const data = await screen.findByRole("dialog", { name: "Data" });
 
-  expect(within(data).getByRole("status")).toHaveTextContent("Signed in as player@example.com");
+  expect(within(data).getByText("Signed in as player@example.com")).toBeInTheDocument();
   expect(within(data).getByRole("button", { name: "Sign out" })).toBeInTheDocument();
   expect(
     within(data).queryByRole("button", { name: "Sign in with Discord" }),
@@ -747,16 +771,14 @@ test("Sign out keeps Local store Entries intact", async () => {
   const user = userEvent.setup();
   const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
   const router = createAppRouter({ history });
-  const authClient = createMemoryAuthClient({
-    userId: "player-1",
-    email: "player@example.com",
-  });
+  const { authClient, profileClient } = createSignedInClients({ displayName: "FinalsFan" });
 
   render(
     <App
       router={router}
       storageAdapter={createMemoryStorageAdapter()}
       authClient={authClient}
+      profileClient={profileClient}
       initialStore={{
         version: 1,
         entries: [
@@ -1294,4 +1316,182 @@ test("Edit Entry from Current Season with cross-Season recordedAt navigates on s
   expect(store.entries[0]?.recordedAt).toMatch(/^2026-04-01T/);
 
   vi.useRealTimers();
+});
+
+test("signed-in player without display name sees required display name step", async () => {
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient } = createSignedInClients({ displayName: null });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={authClient}
+      profileClient={profileClient}
+    />,
+  );
+
+  expect(await screen.findByRole("region", { name: "Choose display name" })).toBeInTheDocument();
+  expect(screen.getByLabelText(/^display name$/i)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Save display name" })).toBeInTheDocument();
+});
+
+test("Season view remains usable while display name step is shown", async () => {
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient } = createSignedInClients({ displayName: null });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={authClient}
+      profileClient={profileClient}
+    />,
+  );
+
+  expect(await screen.findByRole("region", { name: "Choose display name" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: /season 11 \(current\)/i })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Log RS" })).toBeInTheDocument();
+});
+
+test("invalid display name shows validation error on display name step", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient } = createSignedInClients({ displayName: null });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={authClient}
+      profileClient={profileClient}
+    />,
+  );
+
+  await screen.findByRole("region", { name: "Choose display name" });
+  await user.type(screen.getByLabelText(/^display name$/i), "ab");
+  await user.click(screen.getByRole("button", { name: "Save display name" }));
+
+  expect(
+    await screen.findByText("Display name must be at least 3 characters."),
+  ).toBeInTheDocument();
+});
+
+test("taken display name shows clear error on display name step", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient } = createSignedInClients({
+    displayName: null,
+    takenDisplayNames: ["taken-name"],
+  });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={authClient}
+      profileClient={profileClient}
+    />,
+  );
+
+  await screen.findByRole("region", { name: "Choose display name" });
+  await user.type(screen.getByLabelText(/^display name$/i), "Taken-Name");
+  await user.click(screen.getByRole("button", { name: "Save display name" }));
+
+  expect(await screen.findByText("That display name is already taken.")).toBeInTheDocument();
+});
+
+test("Log RS remains usable while display name step is shown", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient } = createSignedInClients({ displayName: null });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={authClient}
+      profileClient={profileClient}
+    />,
+  );
+
+  await screen.findByRole("region", { name: "Choose display name" });
+  await user.click(screen.getByRole("button", { name: "Log RS" }));
+
+  expect(await screen.findByRole("dialog", { name: "Log RS" })).toBeInTheDocument();
+});
+
+test("cloud sync is blocked until display name is saved", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient } = createSignedInClients({ displayName: null });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={authClient}
+      profileClient={profileClient}
+    />,
+  );
+
+  await user.click(await screen.findByRole("button", { name: "Data" }));
+  const data = await screen.findByRole("dialog", { name: "Data" });
+
+  expect(
+    within(data).getByText("Cloud sync blocked until you choose a display name."),
+  ).toBeInTheDocument();
+  expect(within(data).queryByText("Cloud sync ready.")).not.toBeInTheDocument();
+});
+
+test("saving a valid display name completes profile and hides display name step", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient } = createSignedInClients({ displayName: null });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={authClient}
+      profileClient={profileClient}
+    />,
+  );
+
+  await screen.findByRole("region", { name: "Choose display name" });
+  await user.type(screen.getByLabelText(/^display name$/i), "NewPlayer");
+  await user.click(screen.getByRole("button", { name: "Save display name" }));
+
+  expect(screen.queryByRole("region", { name: "Choose display name" })).not.toBeInTheDocument();
+
+  await user.click(screen.getByRole("button", { name: "Data" }));
+  const data = await screen.findByRole("dialog", { name: "Data" });
+  expect(within(data).getByText("Display name: NewPlayer")).toBeInTheDocument();
+  expect(within(data).getByText("Cloud sync ready.")).toBeInTheDocument();
+  expect(within(data).queryByLabelText(/^display name$/i)).not.toBeInTheDocument();
+});
+
+test("returning signed-in player with display name skips display name step", async () => {
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient } = createSignedInClients({ displayName: "FinalsFan" });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={authClient}
+      profileClient={profileClient}
+    />,
+  );
+
+  await screen.findByRole("heading", { name: "Rank Tracker" });
+  expect(screen.queryByRole("region", { name: "Choose display name" })).not.toBeInTheDocument();
 });

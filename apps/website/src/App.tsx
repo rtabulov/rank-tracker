@@ -12,12 +12,19 @@ import {
   type RouterHistory,
 } from "@tanstack/react-router";
 import { AuthProvider } from "@/components/auth-provider";
+import { DisplayNameGate } from "@/components/display-name-gate";
 import { HeaderActions } from "@/components/header-actions";
+import { ProfileProvider } from "@/components/profile-provider";
 import { LocalStoreProvider, useLocalStore } from "@/components/local-store-provider";
 import { SeasonView } from "@/components/season-view";
 import { ThemeHotkey } from "@/components/theme-hotkey";
 import { ThemeProvider } from "@/components/theme-provider";
 import { createMemoryAuthClient, createSupabaseAuthClient, type AuthClient } from "@/lib/auth";
+import {
+  createMemoryProfileClient,
+  createSupabaseProfileClient,
+  type ProfileClient,
+} from "@/lib/profile";
 import { PAGES_BASEPATH } from "@/lib/paths";
 import { getCurrentSeason, isSeasonNavigable } from "@/lib/seasons";
 import type { StorageAdapter, UnmigratedLocalStore } from "@/lib/types";
@@ -29,6 +36,13 @@ function createDefaultAuthClient(): AuthClient {
     return createMemoryAuthClient();
   }
   return createSupabaseAuthClient();
+}
+
+function createDefaultProfileClient(): ProfileClient {
+  if (import.meta.env.MODE === "test") {
+    return createMemoryProfileClient();
+  }
+  return createSupabaseProfileClient();
 }
 
 type SeasonSearch = {
@@ -99,6 +113,7 @@ function RootLayout() {
             <HeaderActions />
           </div>
         </header>
+        <DisplayNameGate />
         <div className="relative z-10 flex flex-1 flex-col">
           <Outlet />
         </div>
@@ -149,21 +164,26 @@ export function App({
   storageAdapter,
   initialStore,
   authClient,
+  profileClient,
 }: {
   router?: AnyRouter;
   storageAdapter?: StorageAdapter;
   initialStore?: UnmigratedLocalStore;
   authClient?: AuthClient;
+  profileClient?: ProfileClient;
 }) {
   const [queryClient] = useState(() => new QueryClient());
   const [resolvedAuthClient] = useState(() => authClient ?? createDefaultAuthClient());
+  const [resolvedProfileClient] = useState(() => profileClient ?? createDefaultProfileClient());
 
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider authClient={resolvedAuthClient}>
-        <LocalStoreProvider storageAdapter={storageAdapter} initialStore={initialStore}>
-          <RouterProvider router={router} />
-        </LocalStoreProvider>
+        <ProfileProvider profileClient={resolvedProfileClient}>
+          <LocalStoreProvider storageAdapter={storageAdapter} initialStore={initialStore}>
+            <RouterProvider router={router} />
+          </LocalStoreProvider>
+        </ProfileProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

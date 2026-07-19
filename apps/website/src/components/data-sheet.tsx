@@ -3,6 +3,7 @@ import { DiscordIcon, GoogleIcon } from "@/components/auth-icons";
 import { Button } from "@/components/ui/button";
 import { ViewportOverlay } from "@/components/viewport-overlay";
 import type { AuthSession } from "@/lib/auth";
+import { isProfileComplete, type PlayerProfile } from "@/lib/profile";
 
 type DataSheetProps = {
   open: boolean;
@@ -13,6 +14,9 @@ type DataSheetProps = {
   importError: string | null;
   session: AuthSession | null;
   authStatus: "loading" | "ready";
+  profile: PlayerProfile | null;
+  profileStatus: "idle" | "loading" | "ready";
+  isCloudSyncAllowed: boolean;
   magicLinkEmail: string;
   onMagicLinkEmailChange: (email: string) => void;
   onSignInWithDiscord: () => void;
@@ -33,6 +37,9 @@ export function DataSheet({
   importError,
   session,
   authStatus,
+  profile,
+  profileStatus,
+  isCloudSyncAllowed,
   magicLinkEmail,
   onMagicLinkEmailChange,
   onSignInWithDiscord,
@@ -44,6 +51,7 @@ export function DataSheet({
   magicLinkSending,
 }: DataSheetProps) {
   const signedIn = session !== null;
+  const profileReady = profileStatus === "ready";
 
   return (
     <ViewportOverlay open={open} title="Data" titleId="data-sheet-title" onClose={onClose}>
@@ -55,6 +63,21 @@ export function DataSheet({
                 <p className="text-sm text-muted-foreground" role="status">
                   {session.email !== null ? `Signed in as ${session.email}` : "Signed in"}
                 </p>
+                {profileReady && isProfileComplete(profile) && profile !== null && (
+                  <p className="text-sm text-muted-foreground" role="status">
+                    Display name: {profile.displayName}
+                  </p>
+                )}
+                {profileReady && !isCloudSyncAllowed && (
+                  <p className="text-sm text-muted-foreground" role="status">
+                    Cloud sync blocked until you choose a display name.
+                  </p>
+                )}
+                {profileReady && isCloudSyncAllowed && (
+                  <p className="text-sm text-muted-foreground" role="status">
+                    Cloud sync ready.
+                  </p>
+                )}
                 <Button type="button" variant="outline" onClick={onSignOut}>
                   Sign out
                 </Button>

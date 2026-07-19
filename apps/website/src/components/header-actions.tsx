@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { Settings } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 import { useLocalStore } from "@/components/local-store-provider";
+import { useProfile } from "@/components/profile-provider";
 import { DataSheet } from "@/components/data-sheet";
 import { ImportConfirmOverlay } from "@/components/import-confirm-overlay";
 import { ModeToggle } from "@/components/mode-toggle";
@@ -14,6 +15,7 @@ import type { LocalStore } from "@/lib/types";
 export function HeaderActions() {
   const { store, setStore } = useLocalStore();
   const { session, status: authStatus, authClient } = useAuth();
+  const { profile, status: profileStatus, isCloudSyncAllowed } = useProfile();
   const [dataOpen, setDataOpen] = useState(false);
   const [importConfirmOpen, setImportConfirmOpen] = useState(false);
   const [pendingImport, setPendingImport] = useState<LocalStore | null>(null);
@@ -148,6 +150,9 @@ export function HeaderActions() {
         importError={importError}
         session={session}
         authStatus={authStatus}
+        profile={profile}
+        profileStatus={profileStatus}
+        isCloudSyncAllowed={isCloudSyncAllowed}
         magicLinkEmail={magicLinkEmail}
         onMagicLinkEmailChange={setMagicLinkEmail}
         onSignInWithDiscord={() => handleSignInWithOAuth("discord")}
