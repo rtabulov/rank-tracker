@@ -16,6 +16,10 @@ _Avoid_: Period, cycle, campaign, ranked cycle
 The player's current ranked progression value in The Finals; the number each Entry records and the chart axis for v1.
 _Avoid_: MMR, ELO, rating, RP, league points
 
+**Rank**:
+The competitive standing derived from a Rank Score — league name plus sub-tier number, always shown uppercased (e.g. `GOLD 1`). Sub-tiers run 4 (lowest) through 1 (highest) within each league, matching The Finals. The ladder tops out at Diamond 1; Ruby (top-500 at season end) is not derived from RS alone.
+_Avoid_: Rank name, league, tier, MMR bracket, division
+
 **Season view**:
 The main screen for one Season — retro-futurism HUD chrome: Latest RS as the neon hero with season-net line, a compact RS sparkline panel, Season summary as terminal label/value rows, and an Entry timeline newest-first with per-entry Δ (single-column; same structure on mobile). On the Current Season with 0 Entries: the hero shows an empty signal (not RS 0) plus a short “log first RS” line; sparkline and Season summary are omitted; the Entry timeline keeps its region with a short empty line; Log RS stays the primary sticky CTA. That empty Current Season state is the first-run experience; v1 has no separate onboarding (no welcome, coach marks, Import nudge, or gated Log RS).
 _Avoid_: Dashboard, home, history page, overview
@@ -47,3 +51,7 @@ _Avoid_: Restore, sync, upload, load, merge
 **Player**:
 The person whose Rank Score history this Local store represents.
 _Avoid_: User, account holder, member
+
+**Display name**:
+The Player's chosen public handle, unique among signed-in Players; required before cloud sync.
+_Avoid_: Username, handle, nickname, gamertag
