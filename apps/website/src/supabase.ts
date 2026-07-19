@@ -1,10 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
+import { env } from "./env.ts";
 
-// Vite requires the VITE_ prefix for env variables exposed to the client
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabasePublicKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-export const supabase = createClient(supabaseUrl, supabasePublicKey, {
+export const supabase = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     flowType: "pkce",
     detectSessionInUrl: true,

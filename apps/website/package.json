@@ -13,6 +13,7 @@
     "@fontsource/jetbrains-mono": "catalog:",
     "@fontsource/orbitron": "catalog:",
     "@supabase/supabase-js": "catalog:",
+    "@t3-oss/env-core": "catalog:",
     "@tailwindcss/vite": "catalog:",
     "@tanstack/react-form": "catalog:",
     "@tanstack/react-query": "catalog:",
