@@ -1753,7 +1753,8 @@ test("failed cloud push does not roll back a successful local Log RS", async () 
   const { authClient, profileClient, userId } = createSignedInClients({
     displayName: "FinalsFan",
   });
-  const entriesClient = createMemoryCloudEntriesClient(undefined, { failUpsert: true });
+  const cloudOptions = { failUpsert: true };
+  const entriesClient = createMemoryCloudEntriesClient(undefined, cloudOptions);
   const storageAdapter = createMemoryStorageAdapter();
 
   render(
@@ -1782,5 +1783,124 @@ test("failed cloud push does not roll back a successful local Log RS", async () 
   expect(store.entries[0]?.rs).toBe(42000);
   expect(entriesClient.getEntries(userId)).toEqual([]);
 
+  expect(screen.getByRole("status", { name: "Cloud sync pending" })).toBeInTheDocument();
+
+  cloudOptions.failUpsert = false;
+  window.dispatchEvent(new Event("focus"));
+
+  await waitFor(() => {
+    expect(entriesClient.getEntries(userId)).toHaveLength(1);
+  });
+  expect(screen.queryByRole("status", { name: "Cloud sync pending" })).not.toBeInTheDocument();
+
   vi.useRealTimers();
+});
+
+function setNavigatorOnline(online: boolean) {
+  vi.spyOn(navigator, "onLine", "get").mockReturnValue(online);
+}
+
+test("offline Log RS queues cloud push and flushes when back online", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date("2026-07-17T12:00:00.000Z"));
+  setNavigatorOnline(false);
+  expect(navigator.onLine).toBe(false);
+
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient, entriesClient, userId } = createSignedInClients({
+    displayName: "FinalsFan",
+  });
+  const storageAdapter = createMemoryStorageAdapter();
+
+  render(
+    <App
+      router={router}
+      storageAdapter={storageAdapter}
+      authClient={authClient}
+      profileClient={profileClient}
+      entriesClient={entriesClient}
+    />,
+  );
+
+  await screen.findByRole("heading", { name: "Rank Tracker" });
+  await waitFor(() => {
+    expect(entriesClient.getEntries(userId)).toEqual([]);
+  });
+
+  await user.click(await screen.findByRole("button", { name: "Log RS" }));
+  await user.clear(screen.getByLabelText(/^recorded at$/i));
+  await user.type(screen.getByLabelText(/^recorded at$/i), "2026-07-16T10:00");
+  await user.type(screen.getByLabelText(/^rs$/i), "42000");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+
+  expect(await screen.findByLabelText("Season hero")).toHaveTextContent("42,000");
+  expect(entriesClient.getEntries(userId)).toEqual([]);
+  expect(screen.getByRole("status", { name: "Cloud sync pending" })).toBeInTheDocument();
+
+  setNavigatorOnline(true);
+  window.dispatchEvent(new Event("online"));
+
+  await waitFor(() => {
+    const cloudEntries = entriesClient.getEntries(userId);
+    expect(cloudEntries).toHaveLength(1);
+    expect(cloudEntries[0]?.rs).toBe(42000);
+  });
+
+  expect(screen.queryByRole("status", { name: "Cloud sync pending" })).not.toBeInTheDocument();
+
+  setNavigatorOnline(true);
+  vi.useRealTimers();
+});
+
+test("failed cloud delete keeps local delete and retries on focus", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient, userId } = createSignedInClients({
+    displayName: "FinalsFan",
+  });
+  const syncedEntry = entryFixture({
+    id: "entry-delete-retry",
+    rs: 42000,
+    recordedAt: "2026-07-15T10:00:00.000Z",
+  });
+  const cloudOptions = { failDelete: true };
+  const entriesClient = createMemoryCloudEntriesClient(undefined, cloudOptions);
+  entriesClient.setEntries(userId, [syncedEntry]);
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={authClient}
+      profileClient={profileClient}
+      entriesClient={entriesClient}
+      initialStore={{ version: APP_SCHEMA_VERSION, entries: [syncedEntry] }}
+    />,
+  );
+
+  await screen.findByLabelText("Season hero");
+
+  await user.click(screen.getByRole("button", { name: "Delete entry-delete-retry" }));
+  const dialog = await screen.findByRole("dialog", { name: "Delete Entry" });
+  await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+  await waitFor(() => {
+    expect(screen.queryByText(/RS 42,000/i)).not.toBeInTheDocument();
+  });
+  expect(entriesClient.getEntries(userId)).toEqual([syncedEntry]);
+  expect(screen.getByRole("status", { name: "Cloud sync pending" })).toBeInTheDocument();
+
+  cloudOptions.failDelete = false;
+
+  window.dispatchEvent(new Event("focus"));
+
+  await waitFor(() => {
+    expect(entriesClient.getEntries(userId)).toEqual([]);
+  });
+  await waitFor(() => {
+    expect(screen.queryByRole("status", { name: "Cloud sync pending" })).not.toBeInTheDocument();
+  });
 });

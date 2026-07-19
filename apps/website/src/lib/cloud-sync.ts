@@ -114,9 +114,15 @@ export async function runSyncPush(input: {
   knownSyncedIds: ReadonlySet<string>;
   userId: string;
   entriesClient: CloudEntriesClient;
-}): Promise<Set<string>> {
+}): Promise<{
+  knownSyncedIds: Set<string>;
+  failedUpserts: Entry[];
+  failedDeletes: string[];
+}> {
   const { upserts, deletes } = diffLocalEntryChanges(input.previousEntries, input.nextEntries);
   const nextKnownSyncedIds = new Set(input.knownSyncedIds);
+  let failedUpserts: Entry[] = [];
+  let failedDeletes: string[] = [];
 
   if (upserts.length > 0) {
     const pushResult = await input.entriesClient.upsertEntries(input.userId, upserts);
@@ -124,6 +130,8 @@ export async function runSyncPush(input: {
       for (const entry of upserts) {
         nextKnownSyncedIds.add(entry.id);
       }
+    } else {
+      failedUpserts = upserts;
     }
   }
 
@@ -134,8 +142,10 @@ export async function runSyncPush(input: {
       for (const id of syncedDeletes) {
         nextKnownSyncedIds.delete(id);
       }
+    } else {
+      failedDeletes = syncedDeletes;
     }
   }
 
-  return nextKnownSyncedIds;
+  return { knownSyncedIds: nextKnownSyncedIds, failedUpserts, failedDeletes };
 }

@@ -5,6 +5,7 @@ import { useLocalStore } from "@/components/local-store-provider";
 import { useProfile } from "@/components/profile-provider";
 import { DataSheet } from "@/components/data-sheet";
 import { ImportConfirmOverlay } from "@/components/import-confirm-overlay";
+import { PendingSyncIndicator } from "@/components/pending-sync-indicator";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
 import type { OAuthProvider } from "@/lib/auth";
@@ -120,6 +121,7 @@ export function HeaderActions() {
   return (
     <>
       <div className="flex items-center gap-2">
+        <PendingSyncIndicator />
         <Button
           type="button"
           variant="outline"
