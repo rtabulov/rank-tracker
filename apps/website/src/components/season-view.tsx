@@ -6,6 +6,7 @@ import { EditEntryOverlay } from "@/components/edit-entry-overlay";
 import { LogRsOverlay } from "@/components/log-rs-overlay";
 import { RsSparkline } from "@/components/rs-sparkline";
 import { SeasonControl } from "@/components/season-control";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { addEntry, deleteEntry, updateEntry } from "@/lib/entries";
 import { formatLocalWhen, formatSigned } from "@/lib/format";
@@ -41,8 +42,16 @@ export function SeasonView({ seasonNumber, onSeasonSelect }: SeasonViewProps) {
   return (
     <main className="mx-auto flex w-full max-w-lg flex-1 flex-col px-4 pb-28 pt-5">
       <section aria-label="Season hero" className="mb-5 flex flex-col gap-2">
-        <p className="font-sans text-[10px] uppercase tracking-[0.3em] text-hud-magenta">
-          {isCurrentSeason ? `S${season.number} // LIVE` : `S${season.number}`}
+        <p className="flex items-center gap-2 font-sans text-[10px] uppercase tracking-[0.3em] text-hud-magenta">
+          <span>S{season.number}</span>
+          {isCurrentSeason && (
+            <Badge
+              variant="outline"
+              className="rounded-none border-hud-magenta/40 px-1.5 font-sans text-[10px] tracking-[0.3em] text-hud-magenta"
+            >
+              LIVE
+            </Badge>
+          )}
         </p>
         {isEmpty ? (
           <>
@@ -209,40 +218,49 @@ export function SeasonView({ seasonNumber, onSeasonSelect }: SeasonViewProps) {
         }}
       />
 
-      {editingEntry !== null && deletingEntry === null && (
-        <EditEntryOverlay
-          open
-          entry={editingEntry}
-          seasonNumber={season.number}
-          onClose={() => setEditingEntry(null)}
-          onSaved={(entry) => {
-            setStore({ ...store, entries: updateEntry(store.entries, entry.id, entry) });
-            const targetSeason = getSeasonForTimestamp(entry.recordedAt);
-            if (targetSeason !== null && targetSeason.number !== season.number) {
-              onSeasonSelect(targetSeason.number);
-            }
-          }}
-          onDeleteRequest={() => {
-            setDeletingEntry(editingEntry);
-            setEditingEntry(null);
-          }}
-        />
-      )}
+      <EditEntryOverlay
+        open={editingEntry !== null && deletingEntry === null}
+        entry={editingEntry ?? PLACEHOLDER_ENTRY}
+        seasonNumber={season.number}
+        onClose={() => setEditingEntry(null)}
+        onSaved={(entry) => {
+          setStore({ ...store, entries: updateEntry(store.entries, entry.id, entry) });
+          const targetSeason = getSeasonForTimestamp(entry.recordedAt);
+          if (targetSeason !== null && targetSeason.number !== season.number) {
+            onSeasonSelect(targetSeason.number);
+          }
+        }}
+        onDeleteRequest={() => {
+          if (editingEntry === null) {
+            return;
+          }
+          setDeletingEntry(editingEntry);
+          setEditingEntry(null);
+        }}
+      />
 
-      {deletingEntry !== null && (
-        <DeleteEntryOverlay
-          open
-          entry={deletingEntry}
-          onClose={() => setDeletingEntry(null)}
-          onConfirm={() => {
-            setStore({ ...store, entries: deleteEntry(store.entries, deletingEntry.id) });
-            setDeletingEntry(null);
-          }}
-        />
-      )}
+      <DeleteEntryOverlay
+        open={deletingEntry !== null}
+        entry={deletingEntry ?? PLACEHOLDER_ENTRY}
+        onClose={() => setDeletingEntry(null)}
+        onConfirm={() => {
+          if (deletingEntry === null) {
+            return;
+          }
+          setStore({ ...store, entries: deleteEntry(store.entries, deletingEntry.id) });
+          setDeletingEntry(null);
+        }}
+      />
     </main>
   );
 }
+
+const PLACEHOLDER_ENTRY: Entry = {
+  id: "placeholder",
+  rs: 0,
+  recordedAt: "1970-01-01T00:00:00.000Z",
+  updatedAt: "1970-01-01T00:00:00.000Z",
+};
 
 function StatRow({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (

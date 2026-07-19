@@ -1,5 +1,8 @@
 import { useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useAuth } from "@/components/auth-provider";
 import { useProfile } from "@/components/profile-provider";
 import { isProfileComplete } from "@/lib/profile";
@@ -56,22 +59,20 @@ export function DisplayNameGate() {
         </div>
         <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium" htmlFor="display-name">
-              Display name
-            </label>
-            <input
+            <Label htmlFor="display-name">Display name</Label>
+            <Input
               id="display-name"
               name="display-name"
               value={displayName}
               onChange={(event) => setDisplayName(event.target.value)}
               autoComplete="nickname"
-              className="h-8 rounded-none border border-border bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="rounded-none"
             />
           </div>
           {error !== null && (
-            <p className="text-sm text-destructive" role="alert">
-              {error}
-            </p>
+            <Alert variant="destructive" className="rounded-none">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
           <Button type="submit" disabled={saving} aria-busy={saving}>
             {saving ? "Saving…" : "Save display name"}

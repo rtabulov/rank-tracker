@@ -1,6 +1,11 @@
 import { Mail } from "lucide-react";
+import type { ChangeEvent, RefObject } from "react";
 import { DiscordIcon, GoogleIcon } from "@/components/auth-icons";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { ViewportOverlay } from "@/components/viewport-overlay";
 import type { AuthSession } from "@/lib/auth";
 import { isProfileComplete, type PlayerProfile } from "@/lib/profile";
@@ -10,6 +15,8 @@ type DataSheetProps = {
   onClose: () => void;
   onExport: () => void;
   onImportClick: () => void;
+  fileInputRef: RefObject<HTMLInputElement | null>;
+  onImportFileChange: (event: ChangeEvent<HTMLInputElement>) => void;
   exportError: string | null;
   importError: string | null;
   session: AuthSession | null;
@@ -37,6 +44,8 @@ export function DataSheet({
   onClose,
   onExport,
   onImportClick,
+  fileInputRef,
+  onImportFileChange,
   exportError,
   importError,
   session,
@@ -63,6 +72,13 @@ export function DataSheet({
 
   return (
     <ViewportOverlay open={open} title="Data" titleId="data-sheet-title" onClose={onClose}>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="application/json,.json"
+        className="hidden"
+        onChange={onImportFileChange}
+      />
       <div className="flex flex-col gap-4">
         {authStatus === "ready" && (
           <section className="flex flex-col gap-3" aria-label="Account">
@@ -101,22 +117,20 @@ export function DataSheet({
                   Sign in with Google
                 </Button>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium" htmlFor="magic-link-email">
-                    Email
-                  </label>
+                  <Label htmlFor="magic-link-email">Email</Label>
                   <div className="relative">
                     <Mail
                       aria-hidden
                       className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
                     />
-                    <input
+                    <Input
                       id="magic-link-email"
                       name="magic-link-email"
                       type="email"
                       autoComplete="email"
                       value={magicLinkEmail}
                       onChange={(event) => onMagicLinkEmailChange(event.target.value)}
-                      className="h-8 w-full rounded-none border border-border bg-background py-0 pr-2.5 pl-9 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                      className="rounded-none pl-9"
                     />
                   </div>
                 </div>
@@ -138,9 +152,9 @@ export function DataSheet({
               </>
             )}
             {authError !== null && (
-              <p className="text-sm text-destructive" role="alert">
-                {authError}
-              </p>
+              <Alert variant="destructive" className="rounded-none">
+                <AlertDescription>{authError}</AlertDescription>
+              </Alert>
             )}
           </section>
         )}
@@ -149,23 +163,22 @@ export function DataSheet({
           Export
         </Button>
         {exportError !== null && (
-          <p className="text-sm text-destructive" role="alert">
-            {exportError}
-          </p>
+          <Alert variant="destructive" className="rounded-none">
+            <AlertDescription>{exportError}</AlertDescription>
+          </Alert>
         )}
         <Button type="button" variant="outline" onClick={onImportClick}>
           Import
         </Button>
         {importError !== null && (
-          <p className="text-sm text-destructive" role="alert">
-            {importError}
-          </p>
+          <Alert variant="destructive" className="rounded-none">
+            <AlertDescription>{importError}</AlertDescription>
+          </Alert>
         )}
 
-        <section
-          className="flex flex-col gap-2 border-t border-border pt-4"
-          aria-label="Data actions"
-        >
+        <Separator />
+
+        <section className="flex flex-col gap-2" aria-label="Data actions">
           <p className="text-sm font-medium">Destructive actions</p>
           <Button type="button" variant="outline" onClick={onClearLocalClick}>
             Clear local data
@@ -181,9 +194,9 @@ export function DataSheet({
             </>
           )}
           {dataActionError !== null && (
-            <p className="text-sm text-destructive" role="alert">
-              {dataActionError}
-            </p>
+            <Alert variant="destructive" className="rounded-none">
+              <AlertDescription>{dataActionError}</AlertDescription>
+            </Alert>
           )}
         </section>
       </div>

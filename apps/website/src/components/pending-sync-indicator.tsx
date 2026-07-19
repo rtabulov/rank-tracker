@@ -1,4 +1,5 @@
 import { CloudUpload } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useCloudSync } from "@/components/cloud-sync-provider";
 import { useProfile } from "@/components/profile-provider";
 
@@ -11,13 +12,14 @@ export function PendingSyncIndicator() {
   }
 
   return (
-    <p
-      className="flex items-center gap-1 font-heading text-[10px] tracking-[0.2em] text-hud-amber"
+    <Badge
+      variant="outline"
+      className="rounded-none border-hud-amber/40 font-heading text-[10px] tracking-[0.2em] text-hud-amber"
       role="status"
       aria-label="Cloud sync pending"
     >
       <CloudUpload aria-hidden className="size-3 shrink-0" />
       Sync pending
-    </p>
+    </Badge>
   );
 }

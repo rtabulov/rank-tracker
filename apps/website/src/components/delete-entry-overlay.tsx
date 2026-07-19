@@ -1,5 +1,14 @@
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { ViewportOverlay } from "@/components/viewport-overlay";
+import { useDeferredOpen } from "@/hooks/use-deferred-open";
 import { formatLocalWhen } from "@/lib/format";
 import type { Entry } from "@/lib/types";
 
@@ -11,24 +20,38 @@ type DeleteEntryOverlayProps = {
 };
 
 export function DeleteEntryOverlay({ open, entry, onClose, onConfirm }: DeleteEntryOverlayProps) {
+  const deferredOpen = useDeferredOpen(open);
+
+  if (!open) {
+    return null;
+  }
+
   return (
-    <ViewportOverlay
-      open={open}
-      title="Delete Entry"
-      titleId="delete-entry-title"
-      onClose={onClose}
+    <AlertDialog
+      open={deferredOpen}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) {
+          onClose();
+        }
+      }}
     >
-      <div className="flex flex-col gap-4">
-        <p className="text-sm text-muted-foreground">
-          This Entry will be permanently removed. There is no undo beyond Export/Import.
-        </p>
+      <AlertDialogContent className="max-w-md sm:max-w-md">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete Entry</AlertDialogTitle>
+          <AlertDialogDescription>
+            This Entry will be permanently removed. There is no undo beyond Export/Import.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
         <p className="text-sm">
           RS {entry.rs.toLocaleString()} · {formatLocalWhen(entry.recordedAt)}
         </p>
-        <Button type="button" variant="destructive" onClick={onConfirm}>
-          Delete
-        </Button>
-      </div>
-    </ViewportOverlay>
+        <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
+          <Button type="button" variant="destructive" onClick={onConfirm}>
+            Delete
+          </Button>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

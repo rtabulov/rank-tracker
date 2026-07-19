@@ -1,5 +1,14 @@
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { ViewportOverlay } from "@/components/viewport-overlay";
+import { useDeferredOpen } from "@/hooks/use-deferred-open";
 
 type DeleteCloudConfirmOverlayProps = {
   open: boolean;
@@ -12,25 +21,36 @@ export function DeleteCloudConfirmOverlay({
   onConfirm,
   onCancel,
 }: DeleteCloudConfirmOverlayProps) {
+  const deferredOpen = useDeferredOpen(open);
+
+  if (!open) {
+    return null;
+  }
+
   return (
-    <ViewportOverlay
-      open={open}
-      title="Delete cloud data"
-      titleId="delete-cloud-confirm-title"
-      onClose={onCancel}
+    <AlertDialog
+      open={deferredOpen}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) {
+          onCancel();
+        }
+      }}
     >
-      <p className="text-sm text-muted-foreground">
-        This permanently removes all of your cloud Entries. Your Local store on this device stays
-        intact and your account is not deleted.
-      </p>
-      <div className="flex flex-col gap-2">
-        <Button type="button" variant="destructive" onClick={onConfirm}>
-          Delete cloud data
-        </Button>
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
-      </div>
-    </ViewportOverlay>
+      <AlertDialogContent className="max-w-md sm:max-w-md">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete cloud data</AlertDialogTitle>
+          <AlertDialogDescription>
+            This permanently removes all of your cloud Entries. Your Local store on this device
+            stays intact and your account is not deleted.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
+          <Button type="button" variant="destructive" onClick={onConfirm}>
+            Delete cloud data
+          </Button>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

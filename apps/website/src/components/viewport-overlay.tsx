@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 const MOBILE_QUERY = "(max-width: 640px)";
 
@@ -32,63 +33,75 @@ type ViewportOverlayProps = {
   children: ReactNode;
 };
 
-export function ViewportOverlay({ open, title, titleId, onClose, children }: ViewportOverlayProps) {
+function OverlayChrome({
+  title,
+  onClose,
+  Title,
+}: {
+  title: string;
+  onClose: () => void;
+  Title: typeof DialogTitle | typeof SheetTitle;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <Title className="text-lg font-medium">{title}</Title>
+      <Button type="button" variant="ghost" onClick={onClose}>
+        Cancel
+      </Button>
+    </div>
+  );
+}
+
+export function ViewportOverlay({
+  open,
+  title,
+  titleId: _titleId,
+  onClose,
+  children,
+}: ViewportOverlayProps) {
   const isMobile = useIsMobileViewport();
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [onClose, open]);
+  const variant = isMobile ? "drawer" : "dialog";
 
   if (!open) {
     return null;
   }
 
-  const variant = isMobile ? "drawer" : "dialog";
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      onClose();
+    }
+  };
 
-  // Portal out of header/layout stacking contexts (z-10) so the overlay paints above the page.
-  return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-      <button
-        type="button"
-        aria-label="Close overlay"
-        className="absolute inset-0 bg-black/50"
-        onClick={onClose}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
+  if (isMobile) {
+    return (
+      <Sheet open onOpenChange={handleOpenChange}>
+        <SheetContent
+          side="bottom"
+          showCloseButton={false}
+          data-overlay-variant={variant}
+          className="max-w-lg gap-4 rounded-t-xl border border-border bg-background p-6"
+        >
+          <SheetHeader className="p-0">
+            <OverlayChrome title={title} onClose={onClose} Title={SheetTitle} />
+          </SheetHeader>
+          {children}
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  return (
+    <Dialog open onOpenChange={handleOpenChange}>
+      <DialogContent
+        showCloseButton={false}
         data-overlay-variant={variant}
-        className={
-          isMobile
-            ? "relative z-10 flex w-full max-w-lg flex-col gap-4 rounded-t-xl border border-border bg-background p-6"
-            : "relative z-10 flex w-full max-w-md flex-col gap-4 rounded-xl border border-border bg-background p-6 shadow-lg"
-        }
+        className="max-w-md gap-4 rounded-xl border border-border bg-background p-6 shadow-lg sm:max-w-md"
       >
-        <div className="flex items-start justify-between gap-4">
-          <h2 id={titleId} className="text-lg font-medium">
-            {title}
-          </h2>
-          <Button type="button" variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-        </div>
+        <DialogHeader className="gap-0">
+          <OverlayChrome title={title} onClose={onClose} Title={DialogTitle} />
+        </DialogHeader>
         {children}
-      </div>
-    </div>,
-    document.body,
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -210,19 +210,13 @@ export function HeaderActions() {
         <ModeToggle />
       </div>
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="application/json,.json"
-        className="hidden"
-        onChange={(event) => void handleFileChange(event)}
-      />
-
       <DataSheet
         open={dataOpen}
         onClose={closeData}
         onExport={handleExport}
         onImportClick={handleImportClick}
+        fileInputRef={fileInputRef}
+        onImportFileChange={(event) => void handleFileChange(event)}
         exportError={exportError}
         importError={importError}
         session={session}

@@ -1,6 +1,8 @@
 import { useForm } from "@tanstack/react-form";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { EntrySeasonChrome } from "@/components/entry-season-chrome";
 import { ViewportOverlay } from "@/components/viewport-overlay";
 import { createEntry } from "@/lib/entries";
@@ -68,17 +70,14 @@ export function LogRsOverlay({ open, seasonNumber, onClose, onSaved }: LogRsOver
         <form.Field name="rs">
           {(field) => (
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium" htmlFor={field.name}>
-                RS
-              </label>
-              <input
+              <Label htmlFor={field.name}>RS</Label>
+              <Input
                 id={field.name}
                 name={field.name}
                 inputMode="numeric"
                 value={field.state.value}
                 onBlur={field.handleBlur}
                 onChange={(event) => field.handleChange(event.target.value)}
-                className="h-8 rounded-lg border border-border bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
               />
               {field.state.meta.errors.map((error) => (
                 <p key={error?.message} className="text-sm text-destructive" role="alert">
@@ -92,17 +91,14 @@ export function LogRsOverlay({ open, seasonNumber, onClose, onSaved }: LogRsOver
         <form.Field name="recordedAtLocal">
           {(field) => (
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium" htmlFor={field.name}>
-                Recorded at
-              </label>
-              <input
+              <Label htmlFor={field.name}>Recorded at</Label>
+              <Input
                 id={field.name}
                 name={field.name}
                 type="datetime-local"
                 value={field.state.value}
                 onBlur={field.handleBlur}
                 onChange={(event) => field.handleChange(event.target.value)}
-                className="h-8 rounded-lg border border-border bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
               />
               {field.state.meta.errors.map((error) => (
                 <p key={error?.message} className="text-sm text-destructive" role="alert">

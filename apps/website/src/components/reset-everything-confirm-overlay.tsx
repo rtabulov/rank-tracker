@@ -1,6 +1,17 @@
 import { useState } from "react";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { ViewportOverlay } from "@/components/viewport-overlay";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useDeferredOpen } from "@/hooks/use-deferred-open";
 
 const RESET_CONFIRMATION = "RESET";
 
@@ -16,6 +27,7 @@ export function ResetEverythingConfirmOverlay({
   onCancel,
 }: ResetEverythingConfirmOverlayProps) {
   const [confirmation, setConfirmation] = useState("");
+  const deferredOpen = useDeferredOpen(open);
 
   const handleClose = () => {
     setConfirmation("");
@@ -27,42 +39,51 @@ export function ResetEverythingConfirmOverlay({
     onConfirm();
   };
 
+  if (!open) {
+    return null;
+  }
+
   return (
-    <ViewportOverlay
-      open={open}
-      title="Reset everything"
-      titleId="reset-everything-confirm-title"
-      onClose={handleClose}
+    <AlertDialog
+      open={deferredOpen}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) {
+          handleClose();
+        }
+      }}
     >
-      <p className="text-sm text-muted-foreground">
-        This clears this device&apos;s Local store and deletes all cloud Entries. Your account stays
-        signed in. Type {RESET_CONFIRMATION} to confirm.
-      </p>
-      <label className="text-sm font-medium" htmlFor="reset-confirmation">
-        Type RESET to confirm
-      </label>
-      <input
-        id="reset-confirmation"
-        name="reset-confirmation"
-        type="text"
-        autoComplete="off"
-        value={confirmation}
-        onChange={(event) => setConfirmation(event.target.value)}
-        className="h-8 w-full rounded-none border border-border bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-      />
-      <div className="flex flex-col gap-2">
-        <Button
-          type="button"
-          variant="destructive"
-          onClick={handleConfirm}
-          disabled={confirmation !== RESET_CONFIRMATION}
-        >
-          Reset everything
-        </Button>
-        <Button type="button" variant="outline" onClick={handleClose}>
-          Cancel
-        </Button>
-      </div>
-    </ViewportOverlay>
+      <AlertDialogContent className="max-w-md sm:max-w-md">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Reset everything</AlertDialogTitle>
+          <AlertDialogDescription>
+            This clears this device&apos;s Local store and deletes all cloud Entries. Your account
+            stays signed in. Type {RESET_CONFIRMATION} to confirm.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="reset-confirmation">Type RESET to confirm</Label>
+          <Input
+            id="reset-confirmation"
+            name="reset-confirmation"
+            type="text"
+            autoComplete="off"
+            value={confirmation}
+            onChange={(event) => setConfirmation(event.target.value)}
+            className="rounded-none"
+          />
+        </div>
+        <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={handleConfirm}
+            disabled={confirmation !== RESET_CONFIRMATION}
+          >
+            Reset everything
+          </Button>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 import { getCurrentSeason } from "@/lib/seasons";
 import type { Season } from "@/lib/types";
@@ -13,10 +13,21 @@ export function SeasonControl({ seasons, selectedSeasonNumber, onSelect }: Seaso
   const currentSeasonNumber = getCurrentSeason().number;
 
   return (
-    <div
+    <ToggleGroup
+      type="single"
+      value={String(selectedSeasonNumber)}
+      onValueChange={(value) => {
+        if (value === "") {
+          return;
+        }
+        onSelect(Number(value));
+      }}
+      variant="outline"
+      size="sm"
+      spacing={1}
       role="radiogroup"
       aria-label="Season"
-      className="inline-flex flex-wrap gap-1 border border-border bg-card/60 p-1"
+      className="flex-wrap rounded-none border border-border bg-card/60 p-1"
     >
       {seasons.map((season) => {
         const label =
@@ -24,24 +35,21 @@ export function SeasonControl({ seasons, selectedSeasonNumber, onSelect }: Seaso
         const selected = season.number === selectedSeasonNumber;
 
         return (
-          <Button
+          <ToggleGroupItem
             key={season.number}
-            type="button"
+            value={String(season.number)}
             role="radio"
             aria-checked={selected}
             aria-label={label}
-            variant={selected ? "default" : "ghost"}
-            size="sm"
             className={cn(
               "rounded-none font-heading text-xs uppercase tracking-[0.15em]",
               !selected && "text-muted-foreground",
             )}
-            onClick={() => onSelect(season.number)}
           >
             {label}
-          </Button>
+          </ToggleGroupItem>
         );
       })}
-    </div>
+    </ToggleGroup>
   );
 }

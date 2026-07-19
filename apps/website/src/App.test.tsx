@@ -337,6 +337,7 @@ test("Entries survive remount via the Local store", async () => {
 });
 
 test("Log RS overlay uses drawer chrome on narrow viewports", async () => {
+  const previousMatchMedia = window.matchMedia;
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
     writable: true,
@@ -352,18 +353,26 @@ test("Log RS overlay uses drawer chrome on narrow viewports", async () => {
     }),
   });
 
-  const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/"] });
-  const router = createAppRouter({ history });
+  try {
+    const user = userEvent.setup();
+    const history = createMemoryHistory({ initialEntries: ["/"] });
+    const router = createAppRouter({ history });
 
-  render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
+    render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
 
-  await user.click(await screen.findByRole("button", { name: "Log RS" }));
+    await user.click(await screen.findByRole("button", { name: "Log RS" }));
 
-  expect(await screen.findByRole("dialog", { name: "Log RS" })).toHaveAttribute(
-    "data-overlay-variant",
-    "drawer",
-  );
+    expect(await screen.findByRole("dialog", { name: "Log RS" })).toHaveAttribute(
+      "data-overlay-variant",
+      "drawer",
+    );
+  } finally {
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      writable: true,
+      value: previousMatchMedia,
+    });
+  }
 });
 
 test("Import success replaces Local store and refreshes Season view", async () => {
@@ -397,12 +406,12 @@ test("Import success replaces Local store and refreshes Season view", async () =
   const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
   await user.upload(fileInput, file);
 
-  expect(await screen.findByRole("dialog", { name: "Import" })).toBeInTheDocument();
+  expect(await screen.findByRole("alertdialog", { name: "Import" })).toBeInTheDocument();
   expect(screen.getByText(/replace your current Local store/i)).toBeInTheDocument();
 
   await user.click(screen.getByRole("button", { name: "Replace" }));
 
-  expect(screen.queryByRole("dialog", { name: "Import" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("alertdialog", { name: "Import" })).not.toBeInTheDocument();
   expect(screen.queryByRole("dialog", { name: "Data" })).not.toBeInTheDocument();
   expect(await screen.findByLabelText("Season hero")).toHaveTextContent("55,000");
   expect(screen.getByText(/RS 55,000/i)).toBeInTheDocument();
@@ -467,7 +476,7 @@ test("sync-ready Import confirmation warns that cloud sync will upload the repla
   const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
   await user.upload(fileInput, file);
 
-  const importDialog = await screen.findByRole("dialog", { name: "Import" });
+  const importDialog = await screen.findByRole("alertdialog", { name: "Import" });
   expect(within(importDialog).getByText(/replace your current Local store/i)).toBeInTheDocument();
   expect(
     within(importDialog).getByText(/cloud sync will upload the imported Local store/i),
@@ -475,7 +484,7 @@ test("sync-ready Import confirmation warns that cloud sync will upload the repla
 
   await user.click(within(importDialog).getByRole("button", { name: "Replace" }));
 
-  expect(screen.queryByRole("dialog", { name: "Import" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("alertdialog", { name: "Import" })).not.toBeInTheDocument();
   expect(await screen.findByLabelText("Season hero")).toHaveTextContent("55,000");
 
   const raw = storageAdapter.getItem(LOCAL_STORE_KEY);
@@ -516,7 +525,7 @@ test("Import failure leaves Local store unchanged and shows category error on Da
   const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
   await user.upload(fileInput, file);
 
-  expect(await screen.findByText("Invalid JSON.")).toBeInTheDocument();
+  expect(await screen.findByRole("alert")).toHaveTextContent("Invalid JSON.");
   expect(screen.getByRole("dialog", { name: "Data" })).toBeInTheDocument();
   expect(JSON.parse(storageAdapter.getItem("rank-tracker-local-store")!)).toEqual(initialStore);
   expect(screen.getByLabelText("Season hero")).toHaveTextContent("12,000");
@@ -556,7 +565,7 @@ test("Import rejects duplicate Entry ids without changing Local store", async ()
   await user.click(screen.getByRole("button", { name: "Data" }));
   await user.upload(document.querySelector('input[type="file"]') as HTMLInputElement, file);
 
-  expect(await screen.findByText("Wrong file shape.")).toBeInTheDocument();
+  expect(await screen.findByRole("alert")).toHaveTextContent("Wrong file shape.");
   expect(JSON.parse(storageAdapter.getItem("rank-tracker-local-store")!)).toEqual(initialStore);
 });
 
@@ -662,7 +671,7 @@ test("Import rejects unsupported version without changing Local store", async ()
   await user.click(screen.getByRole("button", { name: "Data" }));
   await user.upload(document.querySelector('input[type="file"]') as HTMLInputElement, file);
 
-  expect(await screen.findByText("Unsupported version.")).toBeInTheDocument();
+  expect(await screen.findByRole("alert")).toHaveTextContent("Unsupported version.");
   expect(JSON.parse(storageAdapter.getItem("rank-tracker-local-store")!)).toEqual(initialStore);
 });
 
@@ -790,7 +799,8 @@ test("Data sheet overlay portals to document body above the page shell", async (
   await user.click(await screen.findByRole("button", { name: "Data" }));
   const dialog = await screen.findByRole("dialog", { name: "Data" });
 
-  expect(dialog.parentElement?.parentElement).toBe(document.body);
+  expect(dialog.ownerDocument.body.contains(dialog)).toBe(true);
+  expect(dialog.parentElement?.closest("header")).toBeNull();
 });
 
 test("signed-out Data sheet offers Discord, Google, and magic link sign-in", async () => {
@@ -1043,13 +1053,13 @@ test("Delete confirm from Entry row hard-deletes and refreshes Season view", asy
 
   await user.click(await screen.findByRole("button", { name: "Delete entry-a" }));
 
-  const dialog = await screen.findByRole("dialog", { name: "Delete Entry" });
+  const dialog = await screen.findByRole("alertdialog", { name: "Delete Entry" });
   expect(within(dialog).getByText(/RS 42,000/i)).toBeInTheDocument();
   expect(within(dialog).getByRole("button", { name: "Delete" })).toBeInTheDocument();
 
   await user.click(within(dialog).getByRole("button", { name: "Delete" }));
 
-  expect(screen.queryByRole("dialog", { name: "Delete Entry" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("alertdialog", { name: "Delete Entry" })).not.toBeInTheDocument();
   expect(screen.queryByText(/RS 42,000/i)).not.toBeInTheDocument();
   expect(screen.getByText(/RS 43,000/i)).toBeInTheDocument();
 
@@ -1089,12 +1099,12 @@ test("Delete from Edit replaces Edit overlay and dismiss returns to Season view"
   await user.click(screen.getByRole("button", { name: "Delete" }));
 
   expect(screen.queryByRole("dialog", { name: "Edit Entry" })).not.toBeInTheDocument();
-  const dialog = await screen.findByRole("dialog", { name: "Delete Entry" });
+  const dialog = await screen.findByRole("alertdialog", { name: "Delete Entry" });
   expect(dialog).toBeInTheDocument();
 
   await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
 
-  expect(screen.queryByRole("dialog", { name: "Delete Entry" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("alertdialog", { name: "Delete Entry" })).not.toBeInTheDocument();
   expect(screen.queryByRole("dialog", { name: "Edit Entry" })).not.toBeInTheDocument();
   expect(screen.getByLabelText("Season hero")).toHaveTextContent("42,000");
 });
@@ -1123,10 +1133,10 @@ test("deleting the last Entry on Current Season shows empty Current Season state
   );
 
   await user.click(await screen.findByRole("button", { name: "Delete entry-only" }));
-  const dialog = await screen.findByRole("dialog", { name: "Delete Entry" });
+  const dialog = await screen.findByRole("alertdialog", { name: "Delete Entry" });
   await user.click(within(dialog).getByRole("button", { name: "Delete" }));
 
-  expect(screen.queryByRole("dialog", { name: "Delete Entry" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("alertdialog", { name: "Delete Entry" })).not.toBeInTheDocument();
   expect(screen.getByLabelText("No RS logged")).toHaveTextContent("—");
   expect(screen.getByText("Log your first RS to get started.")).toBeInTheDocument();
   expect(screen.queryByLabelText("RS sparkline")).not.toBeInTheDocument();
@@ -1769,7 +1779,7 @@ test("local delete removes previously synced Entry from cloud", async () => {
   await screen.findByLabelText("Season hero");
 
   await user.click(screen.getByRole("button", { name: "Delete entry-delete-cloud" }));
-  const dialog = await screen.findByRole("dialog", { name: "Delete Entry" });
+  const dialog = await screen.findByRole("alertdialog", { name: "Delete Entry" });
   await user.click(within(dialog).getByRole("button", { name: "Delete" }));
 
   await waitFor(() => {
@@ -1956,7 +1966,7 @@ test("failed cloud delete keeps local delete and retries on focus", async () => 
   await screen.findByLabelText("Season hero");
 
   await user.click(screen.getByRole("button", { name: "Delete entry-delete-retry" }));
-  const dialog = await screen.findByRole("dialog", { name: "Delete Entry" });
+  const dialog = await screen.findByRole("alertdialog", { name: "Delete Entry" });
   await user.click(within(dialog).getByRole("button", { name: "Delete" }));
 
   await waitFor(() => {
@@ -2011,7 +2021,7 @@ test("Clear local data wipes Local store and sync bookkeeping without deleting c
   const data = await screen.findByRole("dialog", { name: "Data" });
   await user.click(within(data).getByRole("button", { name: "Clear local data" }));
 
-  const confirm = await screen.findByRole("dialog", { name: "Clear local data" });
+  const confirm = await screen.findByRole("alertdialog", { name: "Clear local data" });
   await user.click(within(confirm).getByRole("button", { name: "Clear local data" }));
 
   expect(await screen.findByLabelText("Season hero")).toHaveTextContent("—");
@@ -2083,7 +2093,7 @@ test("Delete cloud data removes cloud Entries but keeps Local store and signed-i
   const data = await screen.findByRole("dialog", { name: "Data" });
   await user.click(within(data).getByRole("button", { name: "Delete cloud data" }));
 
-  const confirm = await screen.findByRole("dialog", { name: "Delete cloud data" });
+  const confirm = await screen.findByRole("alertdialog", { name: "Delete cloud data" });
   await user.click(within(confirm).getByRole("button", { name: "Delete cloud data" }));
 
   await waitFor(() => {
@@ -2136,7 +2146,7 @@ test("Reset everything requires typed confirmation and clears local and cloud En
   const data = await screen.findByRole("dialog", { name: "Data" });
   await user.click(within(data).getByRole("button", { name: "Reset everything" }));
 
-  const confirm = await screen.findByRole("dialog", { name: "Reset everything" });
+  const confirm = await screen.findByRole("alertdialog", { name: "Reset everything" });
   const resetButton = within(confirm).getByRole("button", { name: "Reset everything" });
   expect(resetButton).toBeDisabled();
 
@@ -2183,7 +2193,7 @@ test("Reset everything confirmation cancel leaves local and cloud Entries unchan
   const data = await screen.findByRole("dialog", { name: "Data" });
   await user.click(within(data).getByRole("button", { name: "Reset everything" }));
 
-  const confirm = await screen.findByRole("dialog", { name: "Reset everything" });
+  const confirm = await screen.findByRole("alertdialog", { name: "Reset everything" });
   await user.click(within(confirm).getAllByRole("button", { name: "Cancel" })[0]!);
 
   expect(screen.getByLabelText("Season hero")).toHaveTextContent("45,000");
