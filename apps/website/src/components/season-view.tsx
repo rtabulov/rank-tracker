@@ -40,7 +40,7 @@ export function SeasonView({ seasonNumber, onSeasonSelect }: SeasonViewProps) {
   const timeline = [...entries].reverse();
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-1 flex-col px-4 pb-28 pt-5">
+    <main className="mx-auto flex w-full max-w-lg flex-1 flex-col px-4 pb-4 pt-5">
       <section aria-label="Season hero" className="mb-5 flex flex-col gap-2">
         <p className="flex items-center gap-2 font-sans text-[10px] uppercase tracking-[0.3em] text-hud-magenta">
           <span>S{season.number}</span>

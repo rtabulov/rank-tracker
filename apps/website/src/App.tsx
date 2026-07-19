@@ -130,6 +130,30 @@ function RootLayout() {
         <div className="relative z-10 flex flex-1 flex-col">
           <Outlet />
         </div>
+        <footer className="relative z-10 mx-auto w-full max-w-lg px-4 pb-28 pt-2">
+          <nav
+            aria-label="Project links"
+            className="flex items-center justify-center gap-3 font-sans text-xs text-muted-foreground"
+          >
+            <a
+              href="https://github.com/rtabulov/rank-tracker"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-foreground"
+            >
+              Source
+            </a>
+            <span aria-hidden="true">·</span>
+            <a
+              href="https://github.com/rtabulov/rank-tracker/issues/new/choose"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-foreground"
+            >
+              Report a problem
+            </a>
+          </nav>
+        </footer>
       </div>
     </ThemeProvider>
   );

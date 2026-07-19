@@ -62,6 +62,30 @@ test("composed tree renders the home shell via the router under the base path", 
   expect(await screen.findByRole("heading", { name: "Rank Tracker" })).toBeInTheDocument();
 });
 
+test("global footer links Source and Report a problem in a new tab", async () => {
+  const history = createMemoryHistory({ initialEntries: ["/"] });
+  const router = createAppRouter({ history });
+
+  render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
+
+  const source = await screen.findByRole("link", { name: "Source" });
+  expect(source).toHaveAttribute("href", "https://github.com/rtabulov/rank-tracker");
+  expect(source).toHaveAttribute("target", "_blank");
+  expect(source.getAttribute("rel")?.split(/\s+/)).toEqual(
+    expect.arrayContaining(["noopener", "noreferrer"]),
+  );
+
+  const report = screen.getByRole("link", { name: "Report a problem" });
+  expect(report).toHaveAttribute(
+    "href",
+    "https://github.com/rtabulov/rank-tracker/issues/new/choose",
+  );
+  expect(report).toHaveAttribute("target", "_blank");
+  expect(report.getAttribute("rel")?.split(/\s+/)).toEqual(
+    expect.arrayContaining(["noopener", "noreferrer"]),
+  );
+});
+
 test("D hotkey cycles explicit light and dark on the document", async () => {
   const user = userEvent.setup();
   const history = createMemoryHistory({ initialEntries: ["/"] });
@@ -715,19 +739,21 @@ test("Export downloads Local store JSON with dated filename", async () => {
   const createElementSpy = vi
     .spyOn(document, "createElement")
     .mockImplementation((tagName, options) => {
+      const element = originalCreateElement(tagName, options);
       if (tagName === "a") {
-        return {
-          get download() {
+        const anchor = element as HTMLAnchorElement;
+        anchor.click = click;
+        Object.defineProperty(anchor, "download", {
+          configurable: true,
+          get() {
             return downloadedFilename;
           },
-          set download(value: string) {
+          set(value: string) {
             downloadedFilename = value;
           },
-          href: "",
-          click,
-        } as unknown as HTMLAnchorElement;
+        });
       }
-      return originalCreateElement(tagName, options);
+      return element;
     });
 
   vi.useFakeTimers({ shouldAdvanceTime: true });
