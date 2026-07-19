@@ -247,6 +247,7 @@ export function HeaderActions() {
 
       <ImportConfirmOverlay
         open={importConfirmOpen}
+        showCloudSyncWarning={session !== null && isCloudSyncAllowed}
         onConfirm={handleImportConfirm}
         onCancel={handleImportCancel}
       />

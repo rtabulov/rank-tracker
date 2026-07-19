@@ -420,6 +420,77 @@ test("Import success replaces Local store and refreshes Season view", async () =
   });
 });
 
+test("sync-ready Import confirmation warns that cloud sync will upload the replaced Local store", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient, entriesClient } = createSignedInClients({
+    displayName: "FinalsFan",
+  });
+  const storageAdapter = createMemoryStorageAdapter({
+    version: APP_SCHEMA_VERSION,
+    entries: [
+      entryFixture({
+        id: "keep-me",
+        rs: 12000,
+        recordedAt: "2026-07-16T10:00:00.000Z",
+      }),
+    ],
+  });
+  const importDocument = {
+    version: 1,
+    entries: [
+      {
+        id: "imported-entry-1",
+        rs: 55000,
+        recordedAt: "2026-07-16T10:00:00.000Z",
+      },
+    ],
+  };
+  const file = new File([JSON.stringify(importDocument)], "backup.json", {
+    type: "application/json",
+  });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={storageAdapter}
+      authClient={authClient}
+      profileClient={profileClient}
+      entriesClient={entriesClient}
+    />,
+  );
+
+  await screen.findByLabelText("Season hero");
+
+  await user.click(screen.getByRole("button", { name: "Data" }));
+  const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+  await user.upload(fileInput, file);
+
+  const importDialog = await screen.findByRole("dialog", { name: "Import" });
+  expect(within(importDialog).getByText(/replace your current Local store/i)).toBeInTheDocument();
+  expect(
+    within(importDialog).getByText(/cloud sync will upload the imported Local store/i),
+  ).toBeInTheDocument();
+
+  await user.click(within(importDialog).getByRole("button", { name: "Replace" }));
+
+  expect(screen.queryByRole("dialog", { name: "Import" })).not.toBeInTheDocument();
+  expect(await screen.findByLabelText("Season hero")).toHaveTextContent("55,000");
+
+  const raw = storageAdapter.getItem(LOCAL_STORE_KEY);
+  expect(JSON.parse(raw!)).toEqual({
+    version: APP_SCHEMA_VERSION,
+    entries: [
+      entryFixture({
+        id: "imported-entry-1",
+        rs: 55000,
+        recordedAt: "2026-07-16T10:00:00.000Z",
+      }),
+    ],
+  });
+});
+
 test("Import failure leaves Local store unchanged and shows category error on Data", async () => {
   const user = userEvent.setup();
   const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
