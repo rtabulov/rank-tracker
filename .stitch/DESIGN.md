@@ -1,45 +1,45 @@
 ---
 name: Rank Tracker Design
 colors:
-  background: "#09090B"
-  foreground: "#FAFAFA"
-  card: "#121212"
-  card-foreground: "#FAFAFA"
-  popover: "#121212"
-  popover-foreground: "#FAFAFA"
-  primary: "#DFE104"
-  primary-foreground: "#09090B"
-  secondary: "#18181B"
-  secondary-foreground: "#FAFAFA"
-  muted: "#18181B"
+  background: "#0A0A0F"
+  foreground: "#E0E0E0"
+  card: "#12121A"
+  card-foreground: "#E0E0E0"
+  popover: "#12121A"
+  popover-foreground: "#E0E0E0"
+  primary: "#00FF88"
+  primary-foreground: "#0A0A0F"
+  secondary: "#1C1C2E"
+  secondary-foreground: "#E0E0E0"
+  muted: "#1C1C2E"
   muted-foreground: "#A1A1AA"
-  accent: "#18181B"
-  accent-foreground: "#FAFAFA"
+  accent: "#00D4FF"
+  accent-foreground: "#0A0A0F"
   destructive: "#FF3366"
-  border: "#3F3F46"
-  input: "#3F3F46"
-  ring: "#DFE104"
+  border: "#2A2A3A"
+  input: "#2A2A3A"
+  ring: "#00FF88"
 typography:
   headline-lg:
-    fontFamily: Barlow Condensed
+    fontFamily: Orbitron
     fontSize: 60px
-    fontWeight: "700"
+    fontWeight: "900"
     lineHeight: "1.0"
     letterSpacing: -0.02em
   headline-md:
-    fontFamily: Barlow Condensed
-    fontSize: 30px
+    fontFamily: Orbitron
+    fontSize: 18px
     fontWeight: "700"
-    lineHeight: "1.1"
-    letterSpacing: 0
+    lineHeight: "1.2"
+    letterSpacing: 0.2em
   body-md:
-    fontFamily: Barlow
-    fontSize: 16px
+    fontFamily: JetBrains Mono
+    fontSize: 14px
     fontWeight: "400"
     lineHeight: "1.5"
   body-sm:
-    fontFamily: Barlow
-    fontSize: 14px
+    fontFamily: JetBrains Mono
+    fontSize: 12px
     fontWeight: "400"
     lineHeight: "1.5"
 rounded:
@@ -58,51 +58,53 @@ spacing:
 
 ## 1. Visual Theme & Atmosphere
 
-Rank Tracker uses a **broadcast scoreboard** aesthetic inspired by competitive game-show energy (THE FINALS-adjacent, not a brand clone): high-contrast near-black surfaces, acid-yellow accents, condensed uppercase display type, and sharp zero-radius frames. The UI should feel like a live results board — legible, kinetic on milestones, calm on persistent data.
-
-Whitespace is moderate. Density favors scannable season stats and a reverse-chronological results list without card chrome.
+Rank Tracker uses a **retro-futurism / cyberpunk HUD** aesthetic: deep void background, neon green primary, cyan and magenta accents, Orbitron display type, JetBrains Mono data type, chamfered frames, and a light CRT scanline overlay (disabled under `prefers-reduced-motion` for glow intensity).
 
 ## 2. Color Palette & Roles
 
-### Dark (default product feel)
+### Dark (product feel)
 
-- **Background (`#09090B`)**: Void canvas.
-- **Card (`#121212`)**: Scoreboard panels.
-- **Primary (`#DFE104`)**: Accent, CTA, positive season net, chart stroke.
-- **Destructive (`#FF3366`)**: Deletes and season-down floods.
-- **Border (`#3F3F46`)**: 2px hard frames.
+- **Background (`#0A0A0F`)**: Void
+- **Card (`#12121A`)**: HUD panels
+- **Primary (`#00FF88`)**: RS, CTA, positive values
+- **Accent / cyan (`#00D4FF`)**: Labels, chart frame
+- **Magenta (`#FF00FF`)**: Season live badge
+- **Destructive (`#FF3366`)**: Delete / negative Δ
 
 ### Light
 
-Same structure with light canvas (`#F4F4F5`), white cards, and a slightly deeper yellow primary (`#C4C700`) for contrast.
+Same structure with softened neon greens/cyans on a light canvas for contrast.
 
 ## 3. Typography
 
-- **Display / headings:** Barlow Condensed, uppercase, bold.
-- **Body / meta:** Barlow.
-- Hero RS uses tabular numerals at ~60px condensed.
+- **Display:** Orbitron 700–900, tracked uppercase for brand and section labels
+- **Body / data:** JetBrains Mono
+- Hero RS: ~60px black weight with optional neon text glow
 
 ## 4. Component Stylings
 
-### Buttons
+### Header
 
-- Sharp corners (`radius: 0`), 2px borders on outline/icon actions.
-- Primary CTA: full-width yellow flood, condensed uppercase label (`Log RS`).
+Chamfered panel (`clip-path`), `SYS // RANK` eyebrow, neon brand wordmark, outline icon actions.
 
-### Season board
+### Season summary
 
-- Definition list as bordered rows; season net row may invert to primary flood.
+Terminal-style `<dl>` rows: muted label left, tabular value right; net/Δ may use primary.
 
 ### Sparkline
 
-- Primary-colored stroke with soft area fill; no dots by default on the season board strip.
+Primary stroke + soft area fill + dots on a cyan-bordered panel.
 
-### Results list
+### Entry timeline
 
-- Numbered rows, newest first, with per-entry Δ in primary/destructive.
+Card rows with neon Edit / destructive Delete icon buttons (≥44px).
+
+### Log RS
+
+Full-width primary flood, Orbitron tracking, soft neon box glow.
 
 ## 5. Do / Don't
 
-- **Do** keep brand as a hero signal in the header strip.
-- **Do** use one accent + semantic up/down colors.
-- **Don't** use CRT scanlines, neon cyan/magenta cyberpunk, or THE FINALS logos/key art.
+- **Do** keep data labels in plain English for a11y (`Latest RS`, `Entry timeline`).
+- **Do** respect `prefers-reduced-motion` for glow intensity.
+- **Don't** use acid-yellow broadcast chrome, THE FINALS logos, or endless glitch animation.

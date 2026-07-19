@@ -242,7 +242,7 @@ test("populated Current Season with one Entry omits sparse summary metrics", asy
   vi.useRealTimers();
 });
 
-test("populated season shows broadcast scoreboard chrome and entry deltas", async () => {
+test("populated season shows retro HUD chrome and entry deltas", async () => {
   const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
   const router = createAppRouter({ history });
 
@@ -268,9 +268,9 @@ test("populated season shows broadcast scoreboard chrome and entry deltas", asyn
     />,
   );
 
-  expect(await screen.findByRole("heading", { name: "Season board" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "Rank Tracker" })).toBeInTheDocument();
+  expect(screen.getByText(/sys \/\/ rank/i)).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Entry timeline" })).toBeInTheDocument();
-  expect(screen.getByText(/season up/i)).toBeInTheDocument();
   expect(screen.getByLabelText("Season hero")).toHaveTextContent("12,500");
   expect(screen.getByLabelText("Season hero")).toHaveTextContent("+2,500");
   expect(screen.getByLabelText("Entry timeline")).toHaveTextContent("+2,500");

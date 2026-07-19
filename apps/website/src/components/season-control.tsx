@@ -16,7 +16,7 @@ export function SeasonControl({ seasons, selectedSeasonNumber, onSelect }: Seaso
     <div
       role="radiogroup"
       aria-label="Season"
-      className="inline-flex flex-wrap gap-1 border-2 border-border p-1"
+      className="inline-flex flex-wrap gap-1 border border-border bg-card/60 p-1"
     >
       {seasons.map((season) => {
         const label =
@@ -33,7 +33,7 @@ export function SeasonControl({ seasons, selectedSeasonNumber, onSelect }: Seaso
             variant={selected ? "default" : "ghost"}
             size="sm"
             className={cn(
-              "rounded-none font-heading uppercase tracking-wide",
+              "rounded-none font-heading text-xs uppercase tracking-[0.15em]",
               !selected && "text-muted-foreground",
             )}
             onClick={() => onSelect(season.number)}

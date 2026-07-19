@@ -10,8 +10,8 @@
     "test": "vp test"
   },
   "dependencies": {
-    "@fontsource/barlow": "catalog:",
-    "@fontsource/barlow-condensed": "catalog:",
+    "@fontsource/jetbrains-mono": "catalog:",
+    "@fontsource/orbitron": "catalog:",
     "@supabase/supabase-js": "catalog:",
     "@tailwindcss/vite": "catalog:",
     "@tanstack/react-form": "catalog:",

@@ -67,21 +67,31 @@ function RootLayout() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
       <ThemeHotkey />
-      <div className="flex min-h-svh flex-col bg-background text-foreground">
-        <header className="border-b-4 border-primary bg-background">
-          <div className="mx-auto flex w-full max-w-lg items-center justify-between gap-3 px-4 py-3">
+      <div className="relative flex min-h-svh flex-col bg-background text-foreground">
+        <div
+          className="pointer-events-none absolute inset-0 z-0 opacity-[0.12] hud-scanlines"
+          aria-hidden="true"
+        />
+        <div
+          className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_top,color-mix(in_oklab,var(--hud-cyan)_12%,transparent),transparent_55%)]"
+          aria-hidden="true"
+        />
+        <header className="relative z-10 mx-auto w-full max-w-lg px-4 pt-4">
+          <div className="hud-chamfer flex items-start justify-between gap-3 border border-primary/30 bg-card/80 p-3">
             <div>
-              <p className="font-heading text-[11px] font-semibold uppercase tracking-[0.28em] text-primary">
-                Unofficial companion
+              <p className="font-heading text-[10px] tracking-[0.35em] text-hud-cyan">
+                SYS // RANK
               </p>
-              <h1 className="font-heading text-3xl font-bold uppercase leading-none tracking-tight">
+              <h1 className="font-heading text-lg font-black uppercase tracking-[0.2em] text-primary hud-glow-primary">
                 Rank Tracker
               </h1>
             </div>
             <HeaderActions />
           </div>
         </header>
-        <Outlet />
+        <div className="relative z-10 flex flex-1 flex-col">
+          <Outlet />
+        </div>
       </div>
     </ThemeProvider>
   );
