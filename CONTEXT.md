@@ -29,12 +29,20 @@ The Season whose start/end window contains today's date; the Season view opens o
 _Avoid_: Active season, latest season, selected season
 
 **Season summary**:
-The aggregate figures for one Season on the Season view: Latest RS, Season high, Season low, Season net, Entry count, and Avg Δ per Entry; on the Current Season only, also Δ last 7 days and Days since last Entry.
+The aggregate figures for one Season on the Season view: Latest RS, Season high, Season low, Season net, and Avg Δ per Entry; on the Current Season only, also Δ last 12 hours, Δ last 7 days, and Days since last Entry.
 _Avoid_: Stats bar, KPIs, metrics panel, overview cards
 
 **Season net**:
 Latest RS minus the first Entry's RS in that Season (signed; zero when the Season has a single Entry).
 _Avoid_: Net change, season delta, total gain
+
+**Δ last 12 hours**:
+On the Current Season, latest RS minus the RS of the last Entry at or before a rolling 12-hour cutoff from now (signed). Omitted when no such baseline Entry exists. Shown on the Season view hero (`/ 12H`) and in the Season summary.
+_Avoid_: Net today, session net, 12h net, daily net
+
+**Δ last 7 days**:
+On the Current Season, latest RS minus the RS of the last Entry at or before a rolling 7-day cutoff from now (signed). Omitted when no such baseline Entry exists. Shown on the Season view hero (`/ 7D`) and in the Season summary.
+_Avoid_: Weekly net, 7d net, week delta
 
 **Local store**:
 The on-device persistence holding the player's Entries and related v1 data.
