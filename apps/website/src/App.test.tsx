@@ -783,6 +783,39 @@ test("Send magic link shows check-email status without signing in", async () => 
   expect(within(data).getByRole("button", { name: "Sign in with Discord" })).toBeInTheDocument();
 });
 
+test("Send magic link shows loading state until the request finishes", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const authClient = createMemoryAuthClient();
+  let resolveMagicLink!: (result: { error: string | null }) => void;
+  const pendingMagicLink = new Promise<{ error: string | null }>((resolve) => {
+    resolveMagicLink = resolve;
+  });
+  authClient.signInWithMagicLink = async () => pendingMagicLink;
+
+  render(
+    <App router={router} storageAdapter={createMemoryStorageAdapter()} authClient={authClient} />,
+  );
+
+  await user.click(await screen.findByRole("button", { name: "Data" }));
+  const data = await screen.findByRole("dialog", { name: "Data" });
+  await user.type(within(data).getByLabelText(/^email$/i), "player@example.com");
+  await user.click(within(data).getByRole("button", { name: "Send magic link" }));
+
+  const sending = within(data).getByRole("button", { name: "Sending…" });
+  expect(sending).toBeDisabled();
+  expect(sending).toHaveAttribute("aria-busy", "true");
+  expect(within(data).queryByRole("status")).not.toBeInTheDocument();
+
+  resolveMagicLink({ error: null });
+
+  expect(await within(data).findByRole("status")).toHaveTextContent(
+    "Check your email for a magic link.",
+  );
+  expect(within(data).getByRole("button", { name: "Send magic link" })).toBeEnabled();
+});
+
 test("Edit on an Entry row opens Edit overlay with editable rs and recordedAt", async () => {
   const user = userEvent.setup();
   const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });

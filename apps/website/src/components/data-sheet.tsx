@@ -1,3 +1,5 @@
+import { Mail } from "lucide-react";
+import { DiscordIcon, GoogleIcon } from "@/components/auth-icons";
 import { Button } from "@/components/ui/button";
 import { ViewportOverlay } from "@/components/viewport-overlay";
 import type { AuthSession } from "@/lib/auth";
@@ -19,6 +21,7 @@ type DataSheetProps = {
   onSignOut: () => void;
   authError: string | null;
   magicLinkSent: boolean;
+  magicLinkSending: boolean;
 };
 
 export function DataSheet({
@@ -38,6 +41,7 @@ export function DataSheet({
   onSignOut,
   authError,
   magicLinkSent,
+  magicLinkSending,
 }: DataSheetProps) {
   const signedIn = session !== null;
 
@@ -58,27 +62,42 @@ export function DataSheet({
             ) : (
               <>
                 <Button type="button" variant="outline" onClick={onSignInWithDiscord}>
+                  <DiscordIcon className="size-4" />
                   Sign in with Discord
                 </Button>
                 <Button type="button" variant="outline" onClick={onSignInWithGoogle}>
+                  <GoogleIcon className="size-4" />
                   Sign in with Google
                 </Button>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-sm font-medium" htmlFor="magic-link-email">
                     Email
                   </label>
-                  <input
-                    id="magic-link-email"
-                    name="magic-link-email"
-                    type="email"
-                    autoComplete="email"
-                    value={magicLinkEmail}
-                    onChange={(event) => onMagicLinkEmailChange(event.target.value)}
-                    className="h-8 rounded-none border border-border bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                  />
+                  <div className="relative">
+                    <Mail
+                      aria-hidden
+                      className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
+                    />
+                    <input
+                      id="magic-link-email"
+                      name="magic-link-email"
+                      type="email"
+                      autoComplete="email"
+                      value={magicLinkEmail}
+                      onChange={(event) => onMagicLinkEmailChange(event.target.value)}
+                      className="h-8 w-full rounded-none border border-border bg-background py-0 pr-2.5 pl-9 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    />
+                  </div>
                 </div>
-                <Button type="button" variant="outline" onClick={onSendMagicLink}>
-                  Send magic link
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onSendMagicLink}
+                  disabled={magicLinkSending}
+                  aria-busy={magicLinkSending}
+                >
+                  <Mail aria-hidden className="size-4" />
+                  {magicLinkSending ? "Sending…" : "Send magic link"}
                 </Button>
                 {magicLinkSent && (
                   <p className="text-sm text-muted-foreground" role="status">

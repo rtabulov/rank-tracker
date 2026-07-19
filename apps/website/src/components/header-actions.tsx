@@ -22,6 +22,7 @@ export function HeaderActions() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [magicLinkEmail, setMagicLinkEmail] = useState("");
   const [magicLinkSent, setMagicLinkSent] = useState(false);
+  const [magicLinkSending, setMagicLinkSending] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const closeData = () => {
@@ -30,6 +31,7 @@ export function HeaderActions() {
     setImportError(null);
     setAuthError(null);
     setMagicLinkSent(false);
+    setMagicLinkSending(false);
   };
 
   const handleExport = () => {
@@ -93,9 +95,14 @@ export function HeaderActions() {
   };
 
   const handleSendMagicLink = () => {
+    if (magicLinkSending) {
+      return;
+    }
     setAuthError(null);
     setMagicLinkSent(false);
+    setMagicLinkSending(true);
     void authClient.signInWithMagicLink(magicLinkEmail.trim()).then((result) => {
+      setMagicLinkSending(false);
       handleAuthResult(result);
       if (result.error === null) {
         setMagicLinkSent(true);
@@ -149,6 +156,7 @@ export function HeaderActions() {
         onSignOut={handleSignOut}
         authError={authError}
         magicLinkSent={magicLinkSent}
+        magicLinkSending={magicLinkSending}
       />
 
       <ImportConfirmOverlay
