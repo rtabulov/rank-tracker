@@ -527,11 +527,98 @@ test("populated season shows retro HUD chrome and entry deltas", async () => {
   );
 
   expect(await screen.findByRole("heading", { name: "Rank Tracker" })).toBeInTheDocument();
-  expect(screen.getByText(/sys \/\/ rank/i)).toBeInTheDocument();
+  expect(screen.getByText("SYS // SILVER 3")).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Entry timeline" })).toBeInTheDocument();
   expect(screen.getByLabelText("Season hero")).toHaveTextContent("12,500");
   expect(screen.getByLabelText("Season hero")).toHaveTextContent("+2,500");
   expect(screen.getByLabelText("Entry timeline")).toHaveTextContent("+2,500");
+});
+
+test("header eyebrow shows SYS // RANK when display name and entries are missing", async () => {
+  const history = createMemoryHistory({ initialEntries: ["/"] });
+  const router = createAppRouter({ history });
+
+  render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
+
+  expect(await screen.findByText("SYS // RANK")).toBeInTheDocument();
+});
+
+test("header eyebrow shows display name with rank placeholder when season has no entries", async () => {
+  const history = createMemoryHistory({ initialEntries: ["/"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient } = createSignedInClients({ displayName: "FinalsFan" });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={authClient}
+      profileClient={profileClient}
+    />,
+  );
+
+  expect(await screen.findByText("FinalsFan // RANK")).toBeInTheDocument();
+});
+
+test("header eyebrow preserves display name casing", async () => {
+  const history = createMemoryHistory({ initialEntries: ["/"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient } = createSignedInClients({ displayName: "myPlayer" });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      initialStore={{
+        version: 1,
+        entries: [
+          entryFixture({ id: "entry-a", rs: 27500, recordedAt: "2026-07-16T10:00:00.000Z" }),
+        ],
+      }}
+      authClient={authClient}
+      profileClient={profileClient}
+    />,
+  );
+
+  expect(await screen.findByText("myPlayer // GOLD 1")).toBeInTheDocument();
+});
+
+test("header eyebrow updates rank when selected season changes", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/"] });
+  const router = createAppRouter({ history });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      initialStore={createStoreWithSeason10Entry()}
+    />,
+  );
+
+  expect(await screen.findByText("SYS // RANK")).toBeInTheDocument();
+
+  await user.click(screen.getByRole("radio", { name: "S10" }));
+
+  expect(await screen.findByText("SYS // BRONZE 1")).toBeInTheDocument();
+});
+
+test("header eyebrow updates rank when latest RS changes", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/"] });
+  const router = createAppRouter({ history });
+
+  render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
+
+  expect(await screen.findByText("SYS // RANK")).toBeInTheDocument();
+
+  await user.click(await screen.findByRole("button", { name: "Log RS" }));
+  await user.clear(screen.getByLabelText(/^recorded at$/i));
+  await user.type(screen.getByLabelText(/^recorded at$/i), "2026-07-16T10:00");
+  await user.type(screen.getByLabelText(/^rs$/i), "27500");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+
+  expect(await screen.findByText("SYS // GOLD 1")).toBeInTheDocument();
 });
 
 test("Entries survive remount via the Local store", async () => {
@@ -1869,6 +1956,7 @@ test("saving a valid display name completes profile and hides display name step"
   await user.click(screen.getByRole("button", { name: "Save display name" }));
 
   expect(screen.queryByRole("region", { name: "Choose display name" })).not.toBeInTheDocument();
+  expect(screen.getByText("NewPlayer // RANK")).toBeInTheDocument();
 
   await user.click(screen.getByRole("button", { name: "Data" }));
   const data = await screen.findByRole("dialog", { name: "Data" });

@@ -15,6 +15,7 @@ import { AuthProvider } from "@/components/auth-provider";
 import { CloudSyncProvider } from "@/components/cloud-sync-provider";
 import { DisplayNameGate } from "@/components/display-name-gate";
 import { HeaderActions } from "@/components/header-actions";
+import { HeaderEyebrow } from "@/components/header-eyebrow";
 import { ProfileProvider } from "@/components/profile-provider";
 import { LocalStoreProvider, useLocalStore } from "@/components/local-store-provider";
 import { SeasonView } from "@/components/season-view";
@@ -32,6 +33,8 @@ import {
   type ProfileClient,
 } from "@/lib/profile";
 import { PAGES_BASEPATH } from "@/lib/paths";
+import { resolveSelectedSeason } from "@/lib/resolve-selected-season";
+import { parseSeasonSearchParam } from "@/lib/season-search";
 import { getCurrentSeason, isSeasonNavigable } from "@/lib/seasons";
 import type { StorageAdapter, UnmigratedLocalStore } from "@/lib/types";
 
@@ -70,14 +73,8 @@ const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
   validateSearch: (search: Record<string, unknown>): SeasonSearch => {
-    const season = search.season;
-    if (typeof season === "number" && Number.isInteger(season)) {
-      return { season };
-    }
-    if (typeof season === "string" && /^\d+$/.test(season)) {
-      return { season: Number(season) };
-    }
-    return {};
+    const season = parseSeasonSearchParam(search);
+    return season === undefined ? {} : { season };
   },
   component: SeasonViewPage,
 });
@@ -116,9 +113,7 @@ function RootLayout() {
         <header className="relative z-10 mx-auto w-full max-w-lg px-4 pt-4">
           <div className="hud-chamfer flex items-start justify-between gap-3 border border-primary/30 bg-card/80 p-3">
             <div>
-              <p className="font-heading text-[10px] tracking-[0.35em] text-hud-cyan">
-                SYS // RANK
-              </p>
+              <HeaderEyebrow />
               <h1 className="font-heading text-lg font-black uppercase tracking-[0.2em] text-primary hud-glow-primary">
                 Rank Tracker
               </h1>
@@ -164,10 +159,7 @@ function SeasonViewPage() {
   const search = useSearch({ from: indexRoute.id });
   const { store } = useLocalStore();
   const currentSeason = getCurrentSeason();
-  const requestedSeason = search.season ?? currentSeason.number;
-  const selectedSeason = isSeasonNavigable(requestedSeason, store.entries)
-    ? requestedSeason
-    : currentSeason.number;
+  const selectedSeason = resolveSelectedSeason(search.season, store.entries);
 
   useEffect(() => {
     if (search.season === undefined) {
