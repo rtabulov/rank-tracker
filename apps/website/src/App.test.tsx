@@ -652,6 +652,25 @@ test("header gear opens Data sheet with Export and Import only", async () => {
   expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
 });
 
+test("Data sheet overlay portals to document body above the page shell", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={createMemoryAuthClient()}
+    />,
+  );
+
+  await user.click(await screen.findByRole("button", { name: "Data" }));
+  const dialog = await screen.findByRole("dialog", { name: "Data" });
+
+  expect(dialog.parentElement?.parentElement).toBe(document.body);
+});
+
 test("signed-out Data sheet offers Discord, Google, and magic link sign-in", async () => {
   const user = userEvent.setup();
   const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
