@@ -54,7 +54,7 @@ function createStoreWithSeason10Entry() {
 }
 
 test("composed tree renders the home shell via the router under the base path", async () => {
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
@@ -64,7 +64,7 @@ test("composed tree renders the home shell via the router under the base path", 
 
 test("D hotkey cycles explicit light and dark on the document", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
@@ -86,7 +86,7 @@ test("D hotkey cycles explicit light and dark on the document", async () => {
 
 test("D hotkey from system theme sets an explicit light or dark theme", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
@@ -103,7 +103,7 @@ test("D hotkey from system theme sets an explicit light or dark theme", async ()
 
 test("toggling theme updates effective light/dark on the document", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
@@ -121,7 +121,7 @@ test("toggling theme updates effective light/dark on the document", async () => 
 });
 
 test("empty Local store opens Current Season view with empty hero and timeline", async () => {
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const storageAdapter = createMemoryStorageAdapter();
 
@@ -140,7 +140,7 @@ test("empty Local store opens Current Season view with empty hero and timeline",
 });
 
 test("selected Season is represented in the URL", async () => {
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
@@ -152,7 +152,7 @@ test("selected Season is represented in the URL", async () => {
 
 test("season search param from the URL selects that Season", async () => {
   const history = createMemoryHistory({
-    initialEntries: [`/rank-tracker/?season=${CURRENT_SEASON_NUMBER}`],
+    initialEntries: [`/?season=${CURRENT_SEASON_NUMBER}`],
   });
   const router = createAppRouter({ history });
 
@@ -166,7 +166,7 @@ test("season search param from the URL selects that Season", async () => {
 
 test("Log RS opens overlay with Save and recordedAt fields", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
@@ -181,7 +181,7 @@ test("Log RS opens overlay with Save and recordedAt fields", async () => {
 
 test("Escape dismisses Log RS overlay without saving", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
@@ -196,7 +196,7 @@ test("Escape dismisses Log RS overlay without saving", async () => {
 
 test("invalid RS shows validation error in Log RS overlay", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
@@ -212,7 +212,7 @@ test("saving Log RS persists Entry and shows populated Current Season view", asy
   vi.setSystemTime(new Date("2026-07-17T12:00:00.000Z"));
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
   const storageAdapter = createMemoryStorageAdapter();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   render(<App router={router} storageAdapter={storageAdapter} />);
@@ -247,7 +247,7 @@ test("populated Current Season with one Entry omits sparse summary metrics", asy
   vi.useFakeTimers({ shouldAdvanceTime: true });
   vi.setSystemTime(new Date("2026-07-17T12:00:00"));
 
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   render(
@@ -280,7 +280,7 @@ test("populated Current Season with one Entry omits sparse summary metrics", asy
 });
 
 test("populated season shows retro HUD chrome and entry deltas", async () => {
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   render(
@@ -316,7 +316,7 @@ test("populated season shows retro HUD chrome and entry deltas", async () => {
 test("Entries survive remount via the Local store", async () => {
   const user = userEvent.setup();
   const storageAdapter = createMemoryStorageAdapter();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   const first = render(<App router={router} storageAdapter={storageAdapter} />);
@@ -353,7 +353,7 @@ test("Log RS overlay uses drawer chrome on narrow viewports", async () => {
   });
 
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
@@ -368,7 +368,7 @@ test("Log RS overlay uses drawer chrome on narrow viewports", async () => {
 
 test("Import success replaces Local store and refreshes Season view", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const storageAdapter = createMemoryStorageAdapter({
     version: 1,
@@ -422,7 +422,7 @@ test("Import success replaces Local store and refreshes Season view", async () =
 
 test("sync-ready Import confirmation warns that cloud sync will upload the replaced Local store", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const { authClient, profileClient, entriesClient } = createSignedInClients({
     displayName: "FinalsFan",
@@ -493,7 +493,7 @@ test("sync-ready Import confirmation warns that cloud sync will upload the repla
 
 test("Import failure leaves Local store unchanged and shows category error on Data", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const initialStore = {
     version: 1,
@@ -524,7 +524,7 @@ test("Import failure leaves Local store unchanged and shows category error on Da
 
 test("Import rejects duplicate Entry ids without changing Local store", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const initialStore = {
     version: 1,
@@ -562,7 +562,7 @@ test("Import rejects duplicate Entry ids without changing Local store", async ()
 
 test("Import migrates lower version and replaces Local store", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const storageAdapter = createMemoryStorageAdapter({ version: 1, entries: [] });
 
@@ -603,7 +603,7 @@ test("Import migrates lower version and replaces Local store", async () => {
 
 test("Import ignores unknown fields and persists only Local store shape", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const storageAdapter = createMemoryStorageAdapter({ version: 1, entries: [] });
 
@@ -645,7 +645,7 @@ test("Import ignores unknown fields and persists only Local store shape", async 
 
 test("Import rejects unsupported version without changing Local store", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const initialStore = { version: 1, entries: [] };
   const storageAdapter = createMemoryStorageAdapter(initialStore);
@@ -668,7 +668,7 @@ test("Import rejects unsupported version without changing Local store", async ()
 
 test("Export blocked download shows failure line on Data", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const createObjectURLSpy = vi.spyOn(URL, "createObjectURL").mockImplementation(() => {
     throw new Error("blocked");
@@ -685,7 +685,7 @@ test("Export blocked download shows failure line on Data", async () => {
 });
 
 test("Export downloads Local store JSON with dated filename", async () => {
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const initialStore = {
     version: APP_SCHEMA_VERSION,
@@ -755,7 +755,7 @@ test("Export downloads Local store JSON with dated filename", async () => {
 
 test("header gear opens Data sheet with Export and Import only", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   render(
@@ -776,7 +776,7 @@ test("header gear opens Data sheet with Export and Import only", async () => {
 
 test("Data sheet overlay portals to document body above the page shell", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   render(
@@ -795,7 +795,7 @@ test("Data sheet overlay portals to document body above the page shell", async (
 
 test("signed-out Data sheet offers Discord, Google, and magic link sign-in", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   render(
@@ -818,7 +818,7 @@ test("signed-out Data sheet offers Discord, Google, and magic link sign-in", asy
 
 test("restored session shows signed-in state and Sign out in Data sheet", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const { authClient, profileClient } = createSignedInClients({ displayName: "FinalsFan" });
 
@@ -843,7 +843,7 @@ test("restored session shows signed-in state and Sign out in Data sheet", async 
 
 test("Sign out keeps Local store Entries intact", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const { authClient, profileClient } = createSignedInClients({ displayName: "FinalsFan" });
 
@@ -880,7 +880,7 @@ test("Sign out keeps Local store Entries intact", async () => {
 
 test("Send magic link shows check-email status without signing in", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   render(
@@ -904,7 +904,7 @@ test("Send magic link shows check-email status without signing in", async () => 
 
 test("Send magic link shows loading state until the request finishes", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const authClient = createMemoryAuthClient();
   let resolveMagicLink!: (result: { error: string | null }) => void;
@@ -937,7 +937,7 @@ test("Send magic link shows loading state until the request finishes", async () 
 
 test("Edit on an Entry row opens Edit overlay with editable rs and recordedAt", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   render(
@@ -971,7 +971,7 @@ test("saving Edit Entry persists changes with stable id", async () => {
   vi.setSystemTime(new Date("2026-07-17T12:00:00.000Z"));
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
   const storageAdapter = createMemoryStorageAdapter();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   render(
@@ -1016,7 +1016,7 @@ test("saving Edit Entry persists changes with stable id", async () => {
 test("Delete confirm from Entry row hard-deletes and refreshes Season view", async () => {
   const user = userEvent.setup();
   const storageAdapter = createMemoryStorageAdapter();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   render(
@@ -1063,7 +1063,7 @@ test("Delete confirm from Entry row hard-deletes and refreshes Season view", asy
 
 test("Delete from Edit replaces Edit overlay and dismiss returns to Season view", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   render(
@@ -1102,7 +1102,7 @@ test("Delete from Edit replaces Edit overlay and dismiss returns to Season view"
 test("deleting the last Entry on Current Season shows empty Current Season state", async () => {
   const user = userEvent.setup();
   const storageAdapter = createMemoryStorageAdapter();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   render(
@@ -1139,7 +1139,7 @@ test("deleting the last Entry on Current Season shows empty Current Season state
 });
 
 test("season control lists Current Season and past Seasons that have Entries", async () => {
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   render(
@@ -1158,7 +1158,7 @@ test("season control lists Current Season and past Seasons that have Entries", a
 
 test("selecting a past Season updates the URL and shows that Season view", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   render(
@@ -1183,7 +1183,7 @@ test("selecting a past Season updates the URL and shows that Season view", async
 
 test("non-navigable Season in the URL snaps to Current Season", async () => {
   const history = createMemoryHistory({
-    initialEntries: ["/rank-tracker/?season=9"],
+    initialEntries: ["/?season=9"],
   });
   const router = createAppRouter({ history });
 
@@ -1203,7 +1203,7 @@ test("non-navigable Season in the URL snaps to Current Season", async () => {
 });
 
 test("empty Local store season control offers only Current Season", async () => {
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
@@ -1214,7 +1214,7 @@ test("empty Local store season control offers only Current Season", async () => 
 
 test("Local store document shape is initialized with empty entries", async () => {
   const storageAdapter = createMemoryStorageAdapter();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   render(<App router={router} storageAdapter={storageAdapter} />);
@@ -1230,7 +1230,7 @@ test("Log RS shows live Season preview derived from recordedAt", async () => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
   vi.setSystemTime(new Date("2026-07-17T12:00:00"));
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
@@ -1249,7 +1249,7 @@ test("Current Season Log RS with backdated recordedAt shows info chrome and navi
   vi.setSystemTime(new Date("2026-07-17T12:00:00"));
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
   const storageAdapter = createMemoryStorageAdapter();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   render(<App router={router} storageAdapter={storageAdapter} />);
@@ -1284,7 +1284,7 @@ test("past Season view blocks save when recordedAt belongs to another Season", a
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
   const initialStore = createStoreWithSeason10Entry();
   const storageAdapter = createMemoryStorageAdapter(initialStore);
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   render(<App router={router} storageAdapter={storageAdapter} initialStore={initialStore} />);
@@ -1308,7 +1308,7 @@ test("recordedAt outside every known Season rejects save and leaves Local store 
   vi.setSystemTime(new Date("2026-07-17T12:00:00"));
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
   const storageAdapter = createMemoryStorageAdapter();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   render(<App router={router} storageAdapter={storageAdapter} />);
@@ -1336,7 +1336,7 @@ test("Edit Entry applies cross-Season rules on past Season mismatch", async () =
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
   const initialStore = createStoreWithSeason10Entry();
   const storageAdapter = createMemoryStorageAdapter(initialStore);
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   render(<App router={router} storageAdapter={storageAdapter} initialStore={initialStore} />);
@@ -1369,7 +1369,7 @@ test("Edit Entry from Current Season with cross-Season recordedAt navigates on s
     ],
   };
   const storageAdapter = createMemoryStorageAdapter(initialStore);
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   render(<App router={router} storageAdapter={storageAdapter} initialStore={initialStore} />);
@@ -1393,7 +1393,7 @@ test("Edit Entry from Current Season with cross-Season recordedAt navigates on s
 });
 
 test("signed-in player without display name sees required display name step", async () => {
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const { authClient, profileClient } = createSignedInClients({ displayName: null });
 
@@ -1412,7 +1412,7 @@ test("signed-in player without display name sees required display name step", as
 });
 
 test("Season view remains usable while display name step is shown", async () => {
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const { authClient, profileClient } = createSignedInClients({ displayName: null });
 
@@ -1432,7 +1432,7 @@ test("Season view remains usable while display name step is shown", async () => 
 
 test("invalid display name shows validation error on display name step", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const { authClient, profileClient } = createSignedInClients({ displayName: null });
 
@@ -1456,7 +1456,7 @@ test("invalid display name shows validation error on display name step", async (
 
 test("taken display name shows clear error on display name step", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const { authClient, profileClient } = createSignedInClients({
     displayName: null,
@@ -1481,7 +1481,7 @@ test("taken display name shows clear error on display name step", async () => {
 
 test("Log RS remains usable while display name step is shown", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const { authClient, profileClient } = createSignedInClients({ displayName: null });
 
@@ -1502,7 +1502,7 @@ test("Log RS remains usable while display name step is shown", async () => {
 
 test("cloud sync is blocked until display name is saved", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const { authClient, profileClient } = createSignedInClients({ displayName: null });
 
@@ -1526,7 +1526,7 @@ test("cloud sync is blocked until display name is saved", async () => {
 
 test("saving a valid display name completes profile and hides display name step", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const { authClient, profileClient } = createSignedInClients({ displayName: null });
 
@@ -1553,7 +1553,7 @@ test("saving a valid display name completes profile and hides display name step"
 });
 
 test("returning signed-in player with display name skips display name step", async () => {
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const { authClient, profileClient } = createSignedInClients({ displayName: "FinalsFan" });
 
@@ -1571,7 +1571,7 @@ test("returning signed-in player with display name skips display name step", asy
 });
 
 test("sync-ready sign-in uploads local-only Entries to cloud", async () => {
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const { authClient, profileClient, entriesClient, userId } = createSignedInClients({
     displayName: "FinalsFan",
@@ -1601,7 +1601,7 @@ test("sync-ready sign-in uploads local-only Entries to cloud", async () => {
 });
 
 test("sync-ready sign-in downloads cloud-only Entries into Local store", async () => {
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const { authClient, profileClient, entriesClient, userId } = createSignedInClients({
     displayName: "FinalsFan",
@@ -1629,7 +1629,7 @@ test("sync-ready sign-in downloads cloud-only Entries into Local store", async (
 
 test("saving display name triggers initial cloud merge for existing local Entries", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const { authClient, profileClient, entriesClient, userId } = createSignedInClients({
     displayName: null,
@@ -1664,7 +1664,7 @@ test("local Log RS pushes a new Entry to cloud when sync-ready", async () => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
   vi.setSystemTime(new Date("2026-07-17T12:00:00.000Z"));
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const { authClient, profileClient, entriesClient, userId } = createSignedInClients({
     displayName: "FinalsFan",
@@ -1703,7 +1703,7 @@ test("local Edit Entry pushes updated Entry to cloud when sync-ready", async () 
   vi.useFakeTimers({ shouldAdvanceTime: true });
   vi.setSystemTime(new Date("2026-07-17T12:00:00.000Z"));
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const { authClient, profileClient, entriesClient, userId } = createSignedInClients({
     displayName: "FinalsFan",
@@ -1743,7 +1743,7 @@ test("local Edit Entry pushes updated Entry to cloud when sync-ready", async () 
 
 test("local delete removes previously synced Entry from cloud", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const { authClient, profileClient, entriesClient, userId } = createSignedInClients({
     displayName: "FinalsFan",
@@ -1778,7 +1778,7 @@ test("local delete removes previously synced Entry from cloud", async () => {
 });
 
 test("focus pull merges a remote-only Entry into Local store", async () => {
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const { authClient, profileClient, entriesClient, userId } = createSignedInClients({
     displayName: "FinalsFan",
@@ -1820,7 +1820,7 @@ test("failed cloud push does not roll back a successful local Log RS", async () 
   vi.useFakeTimers({ shouldAdvanceTime: true });
   vi.setSystemTime(new Date("2026-07-17T12:00:00.000Z"));
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const { authClient, profileClient, userId } = createSignedInClients({
     displayName: "FinalsFan",
@@ -1879,7 +1879,7 @@ test("offline Log RS queues cloud push and flushes when back online", async () =
   expect(navigator.onLine).toBe(false);
 
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const { authClient, profileClient, entriesClient, userId } = createSignedInClients({
     displayName: "FinalsFan",
@@ -1928,7 +1928,7 @@ test("offline Log RS queues cloud push and flushes when back online", async () =
 
 test("failed cloud delete keeps local delete and retries on focus", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const { authClient, profileClient, userId } = createSignedInClients({
     displayName: "FinalsFan",
@@ -1979,7 +1979,7 @@ test("failed cloud delete keeps local delete and retries on focus", async () => 
 
 test("Clear local data wipes Local store and sync bookkeeping without deleting cloud Entries", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const { authClient, profileClient, entriesClient, userId } = createSignedInClients({
     displayName: "FinalsFan",
@@ -2031,7 +2031,7 @@ test("Clear local data wipes Local store and sync bookkeeping without deleting c
 
 test("signed-out Data sheet offers Clear local data but not Delete cloud data", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
   render(
@@ -2052,7 +2052,7 @@ test("signed-out Data sheet offers Clear local data but not Delete cloud data", 
 
 test("Delete cloud data removes cloud Entries but keeps Local store and signed-in session", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const { authClient, profileClient, entriesClient, userId } = createSignedInClients({
     displayName: "FinalsFan",
@@ -2104,7 +2104,7 @@ test("Delete cloud data removes cloud Entries but keeps Local store and signed-i
 
 test("Reset everything requires typed confirmation and clears local and cloud Entries", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const { authClient, profileClient, entriesClient, userId } = createSignedInClients({
     displayName: "FinalsFan",
@@ -2152,7 +2152,7 @@ test("Reset everything requires typed confirmation and clears local and cloud En
 
 test("Reset everything confirmation cancel leaves local and cloud Entries unchanged", async () => {
   const user = userEvent.setup();
-  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const { authClient, profileClient, entriesClient, userId } = createSignedInClients({
     displayName: "FinalsFan",

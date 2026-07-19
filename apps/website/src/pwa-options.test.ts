@@ -1,9 +1,9 @@
 import { expect, test } from "vite-plus/test";
 import { websitePwaOptions } from "./pwa-options.ts";
 
-test("PWA manifest start and scope stay under the Pages base path", () => {
-  expect(websitePwaOptions.manifest?.start_url).toBe("/rank-tracker/");
-  expect(websitePwaOptions.manifest?.scope).toBe("/rank-tracker/");
+test("PWA manifest start and scope stay at site root", () => {
+  expect(websitePwaOptions.manifest?.start_url).toBe("/");
+  expect(websitePwaOptions.manifest?.scope).toBe("/");
 });
 
 test("PWA service worker precaches the static shell without API runtime caching", () => {
