@@ -79,7 +79,8 @@ export function HeaderActions() {
         <Button
           type="button"
           variant="outline"
-          size="icon"
+          size="icon-lg"
+          className="rounded-none border-2"
           aria-label="Data"
           onClick={() => setDataOpen(true)}
         >

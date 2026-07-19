@@ -67,10 +67,19 @@ function RootLayout() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
       <ThemeHotkey />
-      <div className="flex min-h-svh flex-col">
-        <header className="flex items-center justify-between gap-4 p-6">
-          <h1 className="text-2xl font-medium tracking-tight">Rank Tracker</h1>
-          <HeaderActions />
+      <div className="flex min-h-svh flex-col bg-background text-foreground">
+        <header className="border-b-4 border-primary bg-background">
+          <div className="mx-auto flex w-full max-w-lg items-center justify-between gap-3 px-4 py-3">
+            <div>
+              <p className="font-heading text-[11px] font-semibold uppercase tracking-[0.28em] text-primary">
+                Unofficial companion
+              </p>
+              <h1 className="font-heading text-3xl font-bold uppercase leading-none tracking-tight">
+                Rank Tracker
+              </h1>
+            </div>
+            <HeaderActions />
+          </div>
         </header>
         <Outlet />
       </div>

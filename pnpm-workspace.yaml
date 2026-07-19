@@ -7,14 +7,15 @@ catalogMode: prefer
 
 catalog:
   "@ai-hero/sandcastle": ^0.12.0
-  "@fontsource-variable/geist": ^5.2.9
+  "@fontsource/barlow": ^5.2.8
+  "@fontsource/barlow-condensed": ^5.2.8
   "@tailwindcss/vite": ^4.3.2
   "@tanstack/react-form": ^1.33.2
   "@tanstack/react-query": ^5.101.2
   "@tanstack/react-router": ^1.170.18
   "@testing-library/user-event": ^14.6.1
   "@types/node": ^24.13.3
-  '@typescript/native-preview': 7.0.0-dev.20260707.2
+  "@typescript/native-preview": 7.0.0-dev.20260707.2
   class-variance-authority: ^0.7.1
   clsx: ^2.1.1
   lucide-react: ^1.24.0
@@ -39,3 +40,4 @@ peerDependencyRules:
     vite: "*"
 allowBuilds:
   esbuild: true
+  puppeteer: set this to true or false

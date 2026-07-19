@@ -17,7 +17,7 @@ The player's current ranked progression value in The Finals; the number each Ent
 _Avoid_: MMR, ELO, rating, RP, league points
 
 **Season view**:
-The main screen for one Season — Latest RS as the hero, a compact RS line, Season summary, and an Entry timeline (single-column; same structure on mobile). On the Current Season with 0 Entries: the hero shows an empty signal (not RS 0) plus a short “log first RS” line; sparkline and Season summary are omitted; the Entry timeline keeps its region with a short empty line; Log RS stays the primary CTA. That empty Current Season state is the first-run experience; v1 has no separate onboarding (no welcome, coach marks, Import nudge, or gated Log RS).
+The main screen for one Season — broadcast scoreboard chrome: Latest RS as the hero beside a season-net flood panel, a compact RS sparkline strip, Season summary (“Season board” rows), and an Entry timeline newest-first with per-entry Δ (single-column; same structure on mobile). On the Current Season with 0 Entries: the hero shows an empty signal (not RS 0) plus a short “log first RS” line; sparkline and Season summary are omitted; the Entry timeline keeps its region with a short empty line; Log RS stays the primary sticky CTA. That empty Current Season state is the first-run experience; v1 has no separate onboarding (no welcome, coach marks, Import nudge, or gated Log RS).
 _Avoid_: Dashboard, home, history page, overview
 
 **Current Season**:
