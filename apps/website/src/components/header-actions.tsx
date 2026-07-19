@@ -1,27 +1,37 @@
 import { useRef, useState } from "react";
 import { Settings } from "lucide-react";
+import { useAuth } from "@/components/auth-provider";
 import { useLocalStore } from "@/components/local-store-provider";
 import { DataSheet } from "@/components/data-sheet";
 import { ImportConfirmOverlay } from "@/components/import-confirm-overlay";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
+import type { OAuthProvider } from "@/lib/auth";
 import { downloadExport } from "@/lib/export";
 import { validateImportDocument } from "@/lib/import";
 import type { LocalStore } from "@/lib/types";
 
 export function HeaderActions() {
   const { store, setStore } = useLocalStore();
+  const { session, status: authStatus, authClient } = useAuth();
   const [dataOpen, setDataOpen] = useState(false);
   const [importConfirmOpen, setImportConfirmOpen] = useState(false);
   const [pendingImport, setPendingImport] = useState<LocalStore | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [magicLinkEmail, setMagicLinkEmail] = useState("");
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
+  const [magicLinkSending, setMagicLinkSending] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const closeData = () => {
     setDataOpen(false);
     setExportError(null);
     setImportError(null);
+    setAuthError(null);
+    setMagicLinkSent(false);
+    setMagicLinkSending(false);
   };
 
   const handleExport = () => {
@@ -73,6 +83,38 @@ export function HeaderActions() {
     setDataOpen(true);
   };
 
+  const handleAuthResult = (result: { error: string | null }) => {
+    if (result.error !== null) {
+      setAuthError(result.error);
+    }
+  };
+
+  const handleSignInWithOAuth = (provider: OAuthProvider) => {
+    setAuthError(null);
+    void authClient.signInWithOAuth(provider).then(handleAuthResult);
+  };
+
+  const handleSendMagicLink = () => {
+    if (magicLinkSending) {
+      return;
+    }
+    setAuthError(null);
+    setMagicLinkSent(false);
+    setMagicLinkSending(true);
+    void authClient.signInWithMagicLink(magicLinkEmail.trim()).then((result) => {
+      setMagicLinkSending(false);
+      handleAuthResult(result);
+      if (result.error === null) {
+        setMagicLinkSent(true);
+      }
+    });
+  };
+
+  const handleSignOut = () => {
+    setAuthError(null);
+    void authClient.signOut().then(handleAuthResult);
+  };
+
   return (
     <>
       <div className="flex items-center gap-2">
@@ -104,6 +146,17 @@ export function HeaderActions() {
         onImportClick={handleImportClick}
         exportError={exportError}
         importError={importError}
+        session={session}
+        authStatus={authStatus}
+        magicLinkEmail={magicLinkEmail}
+        onMagicLinkEmailChange={setMagicLinkEmail}
+        onSignInWithDiscord={() => handleSignInWithOAuth("discord")}
+        onSignInWithGoogle={() => handleSignInWithOAuth("google")}
+        onSendMagicLink={handleSendMagicLink}
+        onSignOut={handleSignOut}
+        authError={authError}
+        magicLinkSent={magicLinkSent}
+        magicLinkSending={magicLinkSending}
       />
 
       <ImportConfirmOverlay

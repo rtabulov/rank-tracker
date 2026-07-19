@@ -11,13 +11,25 @@ import {
   type AnyRouter,
   type RouterHistory,
 } from "@tanstack/react-router";
+import { AuthProvider } from "@/components/auth-provider";
 import { HeaderActions } from "@/components/header-actions";
 import { LocalStoreProvider, useLocalStore } from "@/components/local-store-provider";
 import { SeasonView } from "@/components/season-view";
 import { ThemeHotkey } from "@/components/theme-hotkey";
 import { ThemeProvider } from "@/components/theme-provider";
+import { createMemoryAuthClient, createSupabaseAuthClient, type AuthClient } from "@/lib/auth";
+import { PAGES_BASEPATH } from "@/lib/paths";
 import { getCurrentSeason, isSeasonNavigable } from "@/lib/seasons";
 import type { LocalStore, StorageAdapter } from "@/lib/types";
+
+export { PAGES_BASEPATH };
+
+function createDefaultAuthClient(): AuthClient {
+  if (import.meta.env.MODE === "test") {
+    return createMemoryAuthClient();
+  }
+  return createSupabaseAuthClient();
+}
 
 type SeasonSearch = {
   season?: number;
@@ -44,8 +56,6 @@ const indexRoute = createRoute({
 });
 
 const routeTree = rootRoute.addChildren([indexRoute]);
-
-export const PAGES_BASEPATH = "/rank-tracker";
 
 export function createAppRouter(options?: { history?: RouterHistory }) {
   return createRouter({
@@ -138,18 +148,23 @@ export function App({
   router = defaultRouter,
   storageAdapter,
   initialStore,
+  authClient,
 }: {
   router?: AnyRouter;
   storageAdapter?: StorageAdapter;
   initialStore?: LocalStore;
+  authClient?: AuthClient;
 }) {
   const [queryClient] = useState(() => new QueryClient());
+  const [resolvedAuthClient] = useState(() => authClient ?? createDefaultAuthClient());
 
   return (
     <QueryClientProvider client={queryClient}>
-      <LocalStoreProvider storageAdapter={storageAdapter} initialStore={initialStore}>
-        <RouterProvider router={router} />
-      </LocalStoreProvider>
+      <AuthProvider authClient={resolvedAuthClient}>
+        <LocalStoreProvider storageAdapter={storageAdapter} initialStore={initialStore}>
+          <RouterProvider router={router} />
+        </LocalStoreProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 
 const MOBILE_QUERY = "(max-width: 640px)";
@@ -57,7 +58,8 @@ export function ViewportOverlay({ open, title, titleId, onClose, children }: Vie
 
   const variant = isMobile ? "drawer" : "dialog";
 
-  return (
+  // Portal out of header/layout stacking contexts (z-10) so the overlay paints above the page.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
       <button
         type="button"
@@ -86,6 +88,7 @@ export function ViewportOverlay({ open, title, titleId, onClose, children }: Vie
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
