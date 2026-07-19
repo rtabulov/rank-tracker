@@ -35,7 +35,7 @@ These override HITL bits in the skills above:
 2. **Fixed point for `/code-review`** — You are on Sandcastle's temp worktree branch. Review with `git diff {{TARGET_BRANCH}}...HEAD` before the host merges. Spec source is issue **#{{ISSUE_NUMBER}}**. Run both Standards and Spec axes in this session (parallel sub-agents optional).
 3. **Do not push** to remotes. Do not open or merge PRs.
 4. **Do not close** issue #{{ISSUE_NUMBER}}. The host orchestrator pushes `main` and closes it after this run.
-5. **Commits** — Conventional Commits; include `#{{ISSUE_NUMBER}}` in the subject or body (e.g. `Refs #{{ISSUE_NUMBER}}`). Run `vp run ready` before committing.
+5. **Commits** — Conventional Commits; include `#{{ISSUE_NUMBER}}` in the subject or body (e.g. `Refs #{{ISSUE_NUMBER}}`). Run `vp check` before committing. **Do not** run `vp run ready` or `vp run -r test` — the host orchestrator runs the full ready gate after merge. During TDD use single-file tests (e.g. `vp test apps/website/src/App.test.tsx`), not the recursive suite.
 6. If blocked (missing context, failing tests you cannot fix, external dependency), leave a comment on the issue and signal complete **without** committing empty work.
 
 # Done

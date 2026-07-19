@@ -48,7 +48,17 @@ const hooks = {
 
 const copyToWorktree = ["node_modules"];
 
-const dockerSandbox = docker({ env: { CI: "true" } });
+// Build validates env at config time; test mode injects fakes in vite.config.ts.
+const dockerSandbox = docker({
+  env: {
+    CI: "true",
+    VITE_SUPABASE_URL: "http://localhost:54321",
+    VITE_SUPABASE_PUBLISHABLE_KEY: "test-anon-key",
+  },
+});
+
+/** Seconds without agent stream output before Sandcastle fails the iteration. */
+const IMPLEMENTER_IDLE_TIMEOUT_SECONDS = 1_200;
 
 // ---------------------------------------------------------------------------
 // Host helpers (impure)
@@ -217,6 +227,23 @@ function ensureMainReady(): HostGate {
   return { ok: true };
 }
 
+function resetMainToOrigin() {
+  execFileSync("git", ["fetch", "origin", "main"], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  execFileSync("git", ["reset", "--hard", "origin/main"], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+}
+
+function runReadyGate() {
+  execFileSync("vp", ["run", "ready"], {
+    stdio: "inherit",
+  });
+}
+
 function pushMain() {
   execFileSync("git", ["push", "origin", "main"], {
     stdio: "inherit",
@@ -357,6 +384,8 @@ if (!hostGate.ok) {
           ISSUE_NUMBER: issueNumber,
         },
         completionSignal: "<promise>COMPLETE</promise>",
+        idleTimeoutSeconds: IMPLEMENTER_IDLE_TIMEOUT_SECONDS,
+        completionTimeoutSeconds: 120,
       });
 
       const afterImplement = decideAfterImplement({
@@ -369,6 +398,22 @@ if (!hostGate.ok) {
       }
 
       console.log(`\nImplementation complete on main (${implement.commits.length} commit(s)).`);
+      console.log("Running ready gate (vp run ready)…");
+      try {
+        runReadyGate();
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        console.log(`Stopping: ready gate failed (${detail}). Resetting main to origin/main.`);
+        try {
+          resetMainToOrigin();
+        } catch (resetError) {
+          const resetDetail = resetError instanceof Error ? resetError.message : String(resetError);
+          console.log(`Could not reset main: ${resetDetail}`);
+        }
+        cleanupAfterFailure(issueNumber, "implement");
+        break;
+      }
+
       console.log("Pushing origin/main…");
       try {
         pushMain();

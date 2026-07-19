@@ -14,4 +14,7 @@ export default defineConfig({
     },
   },
   fmt: {},
+  test: {
+    pool: "threads",
+  },
 });

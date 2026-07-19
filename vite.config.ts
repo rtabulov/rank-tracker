@@ -17,6 +17,7 @@ export default defineConfig({
     cache: true,
   },
   test: {
+    pool: "threads",
     include: [".sandcastle/*.test.ts"],
     exclude: [".sandcastle/worktrees/**", "**/node_modules/**"],
   },

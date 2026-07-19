@@ -32,6 +32,9 @@ export default defineConfig(({ mode }) => {
       },
     },
     test: {
+      // Fork workers can hang when Vitest runs as a subprocess of the Cursor
+      // agent (piped stdout in Sandcastle Docker). Threads avoid that IPC stall.
+      pool: "threads",
       environment: "jsdom",
       setupFiles: ["./src/test/setup.ts"],
       include: ["src/**/*.test.{ts,tsx}"],
