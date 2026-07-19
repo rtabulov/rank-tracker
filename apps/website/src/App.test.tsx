@@ -5,19 +5,23 @@ import { expect, test, vi } from "vite-plus/test";
 import { App, createAppRouter } from "./App.tsx";
 import { createMemoryAuthClient } from "./lib/auth";
 import { createMemoryStorageAdapter } from "./lib/local-store";
+import { APP_SCHEMA_VERSION } from "./lib/schema";
 
 const CURRENT_SEASON_NUMBER = 11;
 
+function entryFixture(input: { id: string; rs: number; recordedAt: string; updatedAt?: string }) {
+  return {
+    id: input.id,
+    rs: input.rs,
+    recordedAt: input.recordedAt,
+    updatedAt: input.updatedAt ?? input.recordedAt,
+  };
+}
+
 function createStoreWithSeason10Entry() {
   return {
-    version: 1 as const,
-    entries: [
-      {
-        id: "s10-entry",
-        rs: 8000,
-        recordedAt: "2026-04-01T10:00:00.000Z",
-      },
-    ],
+    version: APP_SCHEMA_VERSION,
+    entries: [entryFixture({ id: "s10-entry", rs: 8000, recordedAt: "2026-04-01T10:00:00.000Z" })],
   };
 }
 
@@ -176,7 +180,9 @@ test("invalid RS shows validation error in Log RS overlay", async () => {
 });
 
 test("saving Log RS persists Entry and shows populated Current Season view", async () => {
-  const user = userEvent.setup();
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date("2026-07-17T12:00:00.000Z"));
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
   const storageAdapter = createMemoryStorageAdapter();
   const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
   const router = createAppRouter({ history });
@@ -199,12 +205,14 @@ test("saving Log RS persists Entry and shows populated Current Season view", asy
   expect(raw).not.toBeNull();
   const store = JSON.parse(raw!) as {
     version: number;
-    entries: Array<{ id: string; rs: number; recordedAt: string }>;
+    entries: Array<{ id: string; rs: number; recordedAt: string; updatedAt: string }>;
   };
   expect(store.entries).toHaveLength(1);
   expect(store.entries[0]?.rs).toBe(42000);
   expect(store.entries[0]?.id).toBeTruthy();
   expect(store.entries[0]?.recordedAt).toMatch(/^2026-07-16T/);
+  expect(store.entries[0]?.updatedAt).toMatch(/^2026-07-17T12:00:00/);
+  vi.useRealTimers();
 });
 
 test("populated Current Season with one Entry omits sparse summary metrics", async () => {
@@ -372,7 +380,16 @@ test("Import success replaces Local store and refreshes Season view", async () =
   expect(screen.getByText(/RS 55,000/i)).toBeInTheDocument();
 
   const raw = storageAdapter.getItem("rank-tracker-local-store");
-  expect(JSON.parse(raw!)).toEqual(importDocument);
+  expect(JSON.parse(raw!)).toEqual({
+    version: APP_SCHEMA_VERSION,
+    entries: [
+      entryFixture({
+        id: "imported-entry-1",
+        rs: 55000,
+        recordedAt: "2026-07-16T10:00:00.000Z",
+      }),
+    ],
+  });
 });
 
 test("Import failure leaves Local store unchanged and shows category error on Data", async () => {
@@ -474,8 +491,14 @@ test("Import migrates lower version and replaces Local store", async () => {
 
   expect(await screen.findByLabelText("Season hero")).toHaveTextContent("42,000");
   expect(JSON.parse(storageAdapter.getItem("rank-tracker-local-store")!)).toEqual({
-    version: 1,
-    entries: importDocument.entries,
+    version: APP_SCHEMA_VERSION,
+    entries: [
+      entryFixture({
+        id: "migrated-entry-1",
+        rs: 42000,
+        recordedAt: "2026-07-16T10:00:00.000Z",
+      }),
+    ],
   });
 });
 
@@ -510,13 +533,13 @@ test("Import ignores unknown fields and persists only Local store shape", async 
   await user.click(await screen.findByRole("button", { name: "Replace" }));
 
   expect(JSON.parse(storageAdapter.getItem("rank-tracker-local-store")!)).toEqual({
-    version: 1,
+    version: APP_SCHEMA_VERSION,
     entries: [
-      {
+      entryFixture({
         id: "imported-entry-1",
         rs: 55000,
         recordedAt: "2026-07-16T10:00:00.000Z",
-      },
+      }),
     ],
   });
 });
@@ -566,13 +589,13 @@ test("Export downloads Local store JSON with dated filename", async () => {
   const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
   const router = createAppRouter({ history });
   const initialStore = {
-    version: 1,
+    version: APP_SCHEMA_VERSION,
     entries: [
-      {
+      entryFixture({
         id: "export-entry-1",
         rs: 33000,
         recordedAt: "2026-07-15T10:00:00.000Z",
-      },
+      }),
     ],
   };
 
@@ -848,7 +871,9 @@ test("Edit on an Entry row opens Edit overlay with editable rs and recordedAt", 
 });
 
 test("saving Edit Entry persists changes with stable id", async () => {
-  const user = userEvent.setup();
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date("2026-07-17T12:00:00.000Z"));
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
   const storageAdapter = createMemoryStorageAdapter();
   const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
   const router = createAppRouter({ history });
@@ -870,6 +895,7 @@ test("saving Edit Entry persists changes with stable id", async () => {
     />,
   );
 
+  vi.setSystemTime(new Date("2026-07-17T16:00:00.000Z"));
   await user.click(await screen.findByRole("button", { name: "Edit entry-edit-1" }));
   await user.clear(screen.getByLabelText(/^rs$/i));
   await user.type(screen.getByLabelText(/^rs$/i), "45000");
@@ -881,11 +907,14 @@ test("saving Edit Entry persists changes with stable id", async () => {
   const raw = storageAdapter.getItem("rank-tracker-local-store");
   const store = JSON.parse(raw!) as {
     version: number;
-    entries: Array<{ id: string; rs: number; recordedAt: string }>;
+    entries: Array<{ id: string; rs: number; recordedAt: string; updatedAt: string }>;
   };
   expect(store.entries).toHaveLength(1);
   expect(store.entries[0]?.id).toBe("entry-edit-1");
   expect(store.entries[0]?.rs).toBe(45000);
+  expect(store.entries[0]?.recordedAt).toBe("2026-07-15T10:00:00.000Z");
+  expect(store.entries[0]?.updatedAt).toMatch(/^2026-07-17T16:00:00/);
+  vi.useRealTimers();
 });
 
 test("Delete confirm from Entry row hard-deletes and refreshes Season view", async () => {
@@ -1098,7 +1127,7 @@ test("Local store document shape is initialized with empty entries", async () =>
 
   const raw = storageAdapter.getItem("rank-tracker-local-store");
   expect(raw).not.toBeNull();
-  expect(JSON.parse(raw!)).toEqual({ version: 1, entries: [] });
+  expect(JSON.parse(raw!)).toEqual({ version: APP_SCHEMA_VERSION, entries: [] });
 });
 
 test("Log RS shows live Season preview derived from recordedAt", async () => {
@@ -1198,7 +1227,7 @@ test("recordedAt outside every known Season rejects save and leaves Local store 
   expect(screen.getByRole("alert")).toHaveTextContent(/outside every known Season/i);
   expect(screen.getByRole("dialog", { name: "Log RS" })).toBeInTheDocument();
   expect(JSON.parse(storageAdapter.getItem("rank-tracker-local-store")!)).toEqual({
-    version: 1,
+    version: APP_SCHEMA_VERSION,
     entries: [],
   });
 

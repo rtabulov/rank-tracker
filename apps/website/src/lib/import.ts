@@ -13,7 +13,7 @@ export type ImportValidationResult =
   | { ok: true; store: LocalStore }
   | { ok: false; category: ImportErrorCategory; message: string };
 
-function isValidEntry(value: unknown): value is Entry {
+function isValidEntry(value: unknown): value is ImportEntry {
   if (typeof value !== "object" || value === null) {
     return false;
   }
@@ -30,19 +30,29 @@ function isValidEntry(value: unknown): value is Entry {
   );
 }
 
-function normalizeEntry(entry: Entry): Entry {
+type ImportEntry = {
+  id: string;
+  rs: number;
+  recordedAt: string;
+  updatedAt?: string;
+};
+
+function normalizeEntry(entry: ImportEntry): Entry {
   return {
     id: entry.id,
     rs: entry.rs,
     recordedAt: entry.recordedAt,
+    updatedAt: entry.updatedAt ?? entry.recordedAt,
   };
 }
 
-function migrateToCurrentVersion(document: { version: number; entries: Entry[] }): LocalStore {
+export function migrateLocalStore(document: {
+  version: number;
+  entries: ImportEntry[];
+}): LocalStore {
   let current = document;
 
   while (current.version < APP_SCHEMA_VERSION) {
-    // v1 ships with an empty migration table.
     current = { version: current.version + 1, entries: current.entries };
   }
 
@@ -74,7 +84,7 @@ export function validateImportDocument(raw: string): ImportValidationResult {
     };
   }
 
-  const entries: Entry[] = [];
+  const entries: ImportEntry[] = [];
   const seenIds = new Set<string>();
 
   for (const item of document.entries) {
@@ -92,6 +102,6 @@ export function validateImportDocument(raw: string): ImportValidationResult {
 
   return {
     ok: true,
-    store: migrateToCurrentVersion({ version: document.version, entries }),
+    store: migrateLocalStore({ version: document.version, entries }),
   };
 }

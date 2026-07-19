@@ -5,11 +5,17 @@ export function createEntryId(): string {
   return nanoid();
 }
 
-export function createEntry(input: { rs: number; recordedAt: string; id?: string }): Entry {
+export function createEntry(input: {
+  rs: number;
+  recordedAt: string;
+  id?: string;
+  updatedAt?: string;
+}): Entry {
   return {
     id: input.id ?? createEntryId(),
     rs: input.rs,
     recordedAt: input.recordedAt,
+    updatedAt: input.updatedAt ?? new Date().toISOString(),
   };
 }
 
@@ -23,7 +29,14 @@ export function updateEntry(
   updates: { rs: number; recordedAt: string },
 ): Entry[] {
   return entries.map((entry) =>
-    entry.id === id ? { ...entry, rs: updates.rs, recordedAt: updates.recordedAt } : entry,
+    entry.id === id
+      ? {
+          ...entry,
+          rs: updates.rs,
+          recordedAt: updates.recordedAt,
+          updatedAt: new Date().toISOString(),
+        }
+      : entry,
   );
 }
 

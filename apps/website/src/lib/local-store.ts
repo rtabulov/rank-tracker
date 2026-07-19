@@ -1,5 +1,6 @@
+import { migrateLocalStore } from "./import.ts";
 import { APP_SCHEMA_VERSION } from "./schema.ts";
-import type { LocalStore, StorageAdapter } from "./types.ts";
+import type { LocalStore, StorageAdapter, UnmigratedLocalStore } from "./types.ts";
 
 export const LOCAL_STORE_KEY = "rank-tracker-local-store";
 
@@ -21,7 +22,15 @@ export function parseLocalStore(raw: string | null): LocalStore {
     typeof parsed.version === "number" &&
     Array.isArray(parsed.entries)
   ) {
-    return { version: parsed.version, entries: parsed.entries };
+    return migrateLocalStore({
+      version: parsed.version,
+      entries: parsed.entries as Array<{
+        id: string;
+        rs: number;
+        recordedAt: string;
+        updatedAt?: string;
+      }>,
+    });
   }
 
   return createEmptyLocalStore();
@@ -35,7 +44,7 @@ export function saveLocalStore(adapter: StorageAdapter, store: LocalStore): void
   adapter.setItem(LOCAL_STORE_KEY, JSON.stringify(store));
 }
 
-export function createMemoryStorageAdapter(initial?: LocalStore): StorageAdapter {
+export function createMemoryStorageAdapter(initial?: UnmigratedLocalStore): StorageAdapter {
   const map = new Map<string, string>();
   if (initial) {
     map.set(LOCAL_STORE_KEY, JSON.stringify(initial));

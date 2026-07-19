@@ -2,6 +2,7 @@ export type Entry = {
   id: string;
   rs: number;
   recordedAt: string;
+  updatedAt: string;
 };
 
 export type Season = {
@@ -14,6 +15,12 @@ export type Season = {
 export type LocalStore = {
   version: number;
   entries: Entry[];
+};
+
+/** Pre-migration store shape (e.g. v1 Imports or legacy localStorage). */
+export type UnmigratedLocalStore = {
+  version: number;
+  entries: Array<{ id: string; rs: number; recordedAt: string; updatedAt?: string }>;
 };
 
 export type StorageAdapter = {

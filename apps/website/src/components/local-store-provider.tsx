@@ -5,7 +5,8 @@ import {
   loadLocalStore,
   saveLocalStore,
 } from "@/lib/local-store";
-import type { LocalStore, StorageAdapter } from "@/lib/types";
+import { migrateLocalStore } from "@/lib/import";
+import type { LocalStore, StorageAdapter, UnmigratedLocalStore } from "@/lib/types";
 
 type LocalStoreContextValue = {
   store: LocalStore;
@@ -22,14 +23,24 @@ export function LocalStoreProvider({
 }: {
   children: ReactNode;
   storageAdapter?: StorageAdapter;
-  initialStore?: LocalStore;
+  initialStore?: UnmigratedLocalStore;
 }) {
   const [store, setStoreState] = useState<LocalStore>(() => {
-    const loaded = initialStore ?? loadLocalStore(storageAdapter);
-    if (initialStore === undefined && storageAdapter.getItem(LOCAL_STORE_KEY) === null) {
-      saveLocalStore(storageAdapter, loaded);
+    if (initialStore !== undefined) {
+      return migrateLocalStore(initialStore);
     }
-    return loaded;
+
+    const raw = storageAdapter.getItem(LOCAL_STORE_KEY);
+    const migrated = loadLocalStore(storageAdapter);
+    if (raw === null) {
+      saveLocalStore(storageAdapter, migrated);
+    } else {
+      const parsed = JSON.parse(raw) as UnmigratedLocalStore;
+      if (parsed.version < migrated.version) {
+        saveLocalStore(storageAdapter, migrated);
+      }
+    }
+    return migrated;
   });
 
   const value = {

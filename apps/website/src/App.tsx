@@ -20,7 +20,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { createMemoryAuthClient, createSupabaseAuthClient, type AuthClient } from "@/lib/auth";
 import { PAGES_BASEPATH } from "@/lib/paths";
 import { getCurrentSeason, isSeasonNavigable } from "@/lib/seasons";
-import type { LocalStore, StorageAdapter } from "@/lib/types";
+import type { StorageAdapter, UnmigratedLocalStore } from "@/lib/types";
 
 export { PAGES_BASEPATH };
 
@@ -152,7 +152,7 @@ export function App({
 }: {
   router?: AnyRouter;
   storageAdapter?: StorageAdapter;
-  initialStore?: LocalStore;
+  initialStore?: UnmigratedLocalStore;
   authClient?: AuthClient;
 }) {
   const [queryClient] = useState(() => new QueryClient());
