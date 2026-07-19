@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { createMemoryHistory } from "@tanstack/react-router";
 import { expect, test, vi } from "vite-plus/test";
 import { App, createAppRouter } from "./App.tsx";
+import { createMemoryAuthClient } from "./lib/auth";
 import { createMemoryStorageAdapter } from "./lib/local-store";
 
 const CURRENT_SEASON_NUMBER = 11;
@@ -635,7 +636,13 @@ test("header gear opens Data sheet with Export and Import only", async () => {
   const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
   const router = createAppRouter({ history });
 
-  render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={createMemoryAuthClient()}
+    />,
+  );
 
   await user.click(await screen.findByRole("button", { name: "Data" }));
 
@@ -643,6 +650,118 @@ test("header gear opens Data sheet with Export and Import only", async () => {
   expect(screen.getByRole("button", { name: "Export" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Import" })).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
+});
+
+test("signed-out Data sheet offers Discord, Google, and magic link sign-in", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={createMemoryAuthClient()}
+    />,
+  );
+
+  await user.click(await screen.findByRole("button", { name: "Data" }));
+  const data = await screen.findByRole("dialog", { name: "Data" });
+
+  expect(within(data).getByRole("button", { name: "Sign in with Discord" })).toBeInTheDocument();
+  expect(within(data).getByRole("button", { name: "Sign in with Google" })).toBeInTheDocument();
+  expect(within(data).getByLabelText(/^email$/i)).toBeInTheDocument();
+  expect(within(data).getByRole("button", { name: "Send magic link" })).toBeInTheDocument();
+  expect(within(data).queryByRole("button", { name: "Sign out" })).not.toBeInTheDocument();
+});
+
+test("restored session shows signed-in state and Sign out in Data sheet", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={createMemoryAuthClient({
+        userId: "player-1",
+        email: "player@example.com",
+      })}
+    />,
+  );
+
+  await user.click(await screen.findByRole("button", { name: "Data" }));
+  const data = await screen.findByRole("dialog", { name: "Data" });
+
+  expect(within(data).getByRole("status")).toHaveTextContent("Signed in as player@example.com");
+  expect(within(data).getByRole("button", { name: "Sign out" })).toBeInTheDocument();
+  expect(
+    within(data).queryByRole("button", { name: "Sign in with Discord" }),
+  ).not.toBeInTheDocument();
+});
+
+test("Sign out keeps Local store Entries intact", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const authClient = createMemoryAuthClient({
+    userId: "player-1",
+    email: "player@example.com",
+  });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={authClient}
+      initialStore={{
+        version: 1,
+        entries: [
+          {
+            id: "keep-me",
+            rs: 42000,
+            recordedAt: "2026-07-15T10:00:00.000Z",
+          },
+        ],
+      }}
+    />,
+  );
+
+  expect(await screen.findByLabelText("Season hero")).toHaveTextContent("42,000");
+
+  await user.click(screen.getByRole("button", { name: "Data" }));
+  const data = await screen.findByRole("dialog", { name: "Data" });
+  await user.click(within(data).getByRole("button", { name: "Sign out" }));
+
+  expect(
+    await within(data).findByRole("button", { name: "Sign in with Discord" }),
+  ).toBeInTheDocument();
+  expect(screen.getByLabelText("Season hero")).toHaveTextContent("42,000");
+});
+
+test("Send magic link shows check-email status without signing in", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={createMemoryAuthClient()}
+    />,
+  );
+
+  await user.click(await screen.findByRole("button", { name: "Data" }));
+  const data = await screen.findByRole("dialog", { name: "Data" });
+  await user.type(within(data).getByLabelText(/^email$/i), "player@example.com");
+  await user.click(within(data).getByRole("button", { name: "Send magic link" }));
+
+  expect(await within(data).findByRole("status")).toHaveTextContent(
+    "Check your email for a magic link.",
+  );
+  expect(within(data).getByRole("button", { name: "Sign in with Discord" })).toBeInTheDocument();
 });
 
 test("Edit on an Entry row opens Edit overlay with editable rs and recordedAt", async () => {
