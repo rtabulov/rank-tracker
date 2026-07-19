@@ -1,9 +1,10 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryHistory } from "@tanstack/react-router";
 import { expect, test, vi } from "vite-plus/test";
 import { App, createAppRouter } from "./App.tsx";
 import { createMemoryAuthClient } from "./lib/auth";
+import { createMemoryCloudEntriesClient } from "./lib/cloud-entries";
 import { createMemoryProfileClient } from "./lib/profile";
 import { createMemoryStorageAdapter } from "./lib/local-store";
 import { APP_SCHEMA_VERSION } from "./lib/schema";
@@ -31,7 +32,8 @@ function createSignedInClients(input?: {
           },
     takenDisplayNames: input?.takenDisplayNames,
   });
-  return { authClient, profileClient };
+  const entriesClient = createMemoryCloudEntriesClient();
+  return { authClient, profileClient, entriesClient, userId };
 }
 
 function entryFixture(input: { id: string; rs: number; recordedAt: string; updatedAt?: string }) {
@@ -1494,4 +1496,291 @@ test("returning signed-in player with display name skips display name step", asy
 
   await screen.findByRole("heading", { name: "Rank Tracker" });
   expect(screen.queryByRole("region", { name: "Choose display name" })).not.toBeInTheDocument();
+});
+
+test("sync-ready sign-in uploads local-only Entries to cloud", async () => {
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient, entriesClient, userId } = createSignedInClients({
+    displayName: "FinalsFan",
+  });
+  const localEntry = entryFixture({
+    id: "local-upload",
+    rs: 44000,
+    recordedAt: "2026-07-15T10:00:00.000Z",
+  });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={authClient}
+      profileClient={profileClient}
+      entriesClient={entriesClient}
+      initialStore={{ version: APP_SCHEMA_VERSION, entries: [localEntry] }}
+    />,
+  );
+
+  await screen.findByLabelText("Season hero");
+
+  await waitFor(() => {
+    expect(entriesClient.getEntries(userId)).toEqual([localEntry]);
+  });
+});
+
+test("sync-ready sign-in downloads cloud-only Entries into Local store", async () => {
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient, entriesClient, userId } = createSignedInClients({
+    displayName: "FinalsFan",
+  });
+  const cloudEntry = entryFixture({
+    id: "cloud-download",
+    rs: 51000,
+    recordedAt: "2026-07-16T10:00:00.000Z",
+  });
+  entriesClient.setEntries(userId, [cloudEntry]);
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={authClient}
+      profileClient={profileClient}
+      entriesClient={entriesClient}
+    />,
+  );
+
+  expect(await screen.findByLabelText("Season hero")).toHaveTextContent("51,000");
+  expect(screen.getByText(/RS 51,000/i)).toBeInTheDocument();
+});
+
+test("saving display name triggers initial cloud merge for existing local Entries", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient, entriesClient, userId } = createSignedInClients({
+    displayName: null,
+  });
+  const localEntry = entryFixture({
+    id: "merge-on-name",
+    rs: 47000,
+    recordedAt: "2026-07-15T10:00:00.000Z",
+  });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={authClient}
+      profileClient={profileClient}
+      entriesClient={entriesClient}
+      initialStore={{ version: APP_SCHEMA_VERSION, entries: [localEntry] }}
+    />,
+  );
+
+  await screen.findByRole("region", { name: "Choose display name" });
+  await user.type(screen.getByLabelText(/^display name$/i), "NewPlayer");
+  await user.click(screen.getByRole("button", { name: "Save display name" }));
+
+  await waitFor(() => {
+    expect(entriesClient.getEntries(userId)).toEqual([localEntry]);
+  });
+});
+
+test("local Log RS pushes a new Entry to cloud when sync-ready", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date("2026-07-17T12:00:00.000Z"));
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient, entriesClient, userId } = createSignedInClients({
+    displayName: "FinalsFan",
+  });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={authClient}
+      profileClient={profileClient}
+      entriesClient={entriesClient}
+    />,
+  );
+
+  await screen.findByRole("heading", { name: "Rank Tracker" });
+
+  await user.click(await screen.findByRole("button", { name: "Log RS" }));
+  await user.clear(screen.getByLabelText(/^recorded at$/i));
+  await user.type(screen.getByLabelText(/^recorded at$/i), "2026-07-16T10:00");
+  await user.type(screen.getByLabelText(/^rs$/i), "42000");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+
+  await screen.findByLabelText("Season hero");
+
+  await waitFor(() => {
+    const cloudEntries = entriesClient.getEntries(userId);
+    expect(cloudEntries).toHaveLength(1);
+    expect(cloudEntries[0]?.rs).toBe(42000);
+  });
+
+  vi.useRealTimers();
+});
+
+test("local Edit Entry pushes updated Entry to cloud when sync-ready", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date("2026-07-17T12:00:00.000Z"));
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient, entriesClient, userId } = createSignedInClients({
+    displayName: "FinalsFan",
+  });
+  const localEntry = entryFixture({
+    id: "entry-edit-cloud",
+    rs: 42000,
+    recordedAt: "2026-07-15T10:00:00.000Z",
+  });
+  entriesClient.setEntries(userId, [localEntry]);
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={authClient}
+      profileClient={profileClient}
+      entriesClient={entriesClient}
+      initialStore={{ version: APP_SCHEMA_VERSION, entries: [localEntry] }}
+    />,
+  );
+
+  await screen.findByLabelText("Season hero");
+
+  vi.setSystemTime(new Date("2026-07-17T16:00:00.000Z"));
+  await user.click(screen.getByRole("button", { name: "Edit entry-edit-cloud" }));
+  await user.clear(screen.getByLabelText(/^rs$/i));
+  await user.type(screen.getByLabelText(/^rs$/i), "45000");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+
+  await waitFor(() => {
+    expect(entriesClient.getEntries(userId)[0]?.rs).toBe(45000);
+  });
+
+  vi.useRealTimers();
+});
+
+test("local delete removes previously synced Entry from cloud", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient, entriesClient, userId } = createSignedInClients({
+    displayName: "FinalsFan",
+  });
+  const syncedEntry = entryFixture({
+    id: "entry-delete-cloud",
+    rs: 42000,
+    recordedAt: "2026-07-15T10:00:00.000Z",
+  });
+  entriesClient.setEntries(userId, [syncedEntry]);
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={authClient}
+      profileClient={profileClient}
+      entriesClient={entriesClient}
+      initialStore={{ version: APP_SCHEMA_VERSION, entries: [syncedEntry] }}
+    />,
+  );
+
+  await screen.findByLabelText("Season hero");
+
+  await user.click(screen.getByRole("button", { name: "Delete entry-delete-cloud" }));
+  const dialog = await screen.findByRole("dialog", { name: "Delete Entry" });
+  await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+  await waitFor(() => {
+    expect(entriesClient.getEntries(userId)).toEqual([]);
+  });
+});
+
+test("focus pull merges a remote-only Entry into Local store", async () => {
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient, entriesClient, userId } = createSignedInClients({
+    displayName: "FinalsFan",
+  });
+  const localEntry = entryFixture({
+    id: "local-stays",
+    rs: 42000,
+    recordedAt: "2026-07-15T10:00:00.000Z",
+  });
+  entriesClient.setEntries(userId, [localEntry]);
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={authClient}
+      profileClient={profileClient}
+      entriesClient={entriesClient}
+      initialStore={{ version: APP_SCHEMA_VERSION, entries: [localEntry] }}
+    />,
+  );
+
+  await screen.findByLabelText("Season hero");
+  expect(screen.queryByText(/RS 39,000/i)).not.toBeInTheDocument();
+
+  const remoteEntry = entryFixture({
+    id: "remote-only",
+    rs: 39000,
+    recordedAt: "2026-07-14T10:00:00.000Z",
+  });
+  entriesClient.setEntries(userId, [localEntry, remoteEntry]);
+
+  window.dispatchEvent(new Event("focus"));
+
+  expect(await screen.findByText(/RS 39,000/i)).toBeInTheDocument();
+});
+
+test("failed cloud push does not roll back a successful local Log RS", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date("2026-07-17T12:00:00.000Z"));
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient, userId } = createSignedInClients({
+    displayName: "FinalsFan",
+  });
+  const entriesClient = createMemoryCloudEntriesClient(undefined, { failUpsert: true });
+  const storageAdapter = createMemoryStorageAdapter();
+
+  render(
+    <App
+      router={router}
+      storageAdapter={storageAdapter}
+      authClient={authClient}
+      profileClient={profileClient}
+      entriesClient={entriesClient}
+    />,
+  );
+
+  await screen.findByRole("heading", { name: "Rank Tracker" });
+
+  await user.click(await screen.findByRole("button", { name: "Log RS" }));
+  await user.clear(screen.getByLabelText(/^recorded at$/i));
+  await user.type(screen.getByLabelText(/^recorded at$/i), "2026-07-16T10:00");
+  await user.type(screen.getByLabelText(/^rs$/i), "42000");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+
+  expect(await screen.findByLabelText("Season hero")).toHaveTextContent("42,000");
+
+  const raw = storageAdapter.getItem("rank-tracker-local-store");
+  const store = JSON.parse(raw!) as { entries: Array<{ rs: number }> };
+  expect(store.entries).toHaveLength(1);
+  expect(store.entries[0]?.rs).toBe(42000);
+  expect(entriesClient.getEntries(userId)).toEqual([]);
+
+  vi.useRealTimers();
 });

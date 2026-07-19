@@ -12,6 +12,7 @@ import {
   type RouterHistory,
 } from "@tanstack/react-router";
 import { AuthProvider } from "@/components/auth-provider";
+import { CloudSyncProvider } from "@/components/cloud-sync-provider";
 import { DisplayNameGate } from "@/components/display-name-gate";
 import { HeaderActions } from "@/components/header-actions";
 import { ProfileProvider } from "@/components/profile-provider";
@@ -20,6 +21,11 @@ import { SeasonView } from "@/components/season-view";
 import { ThemeHotkey } from "@/components/theme-hotkey";
 import { ThemeProvider } from "@/components/theme-provider";
 import { createMemoryAuthClient, createSupabaseAuthClient, type AuthClient } from "@/lib/auth";
+import {
+  createMemoryCloudEntriesClient,
+  createSupabaseCloudEntriesClient,
+  type CloudEntriesClient,
+} from "@/lib/cloud-entries";
 import {
   createMemoryProfileClient,
   createSupabaseProfileClient,
@@ -43,6 +49,13 @@ function createDefaultProfileClient(): ProfileClient {
     return createMemoryProfileClient();
   }
   return createSupabaseProfileClient();
+}
+
+function createDefaultCloudEntriesClient(): CloudEntriesClient {
+  if (import.meta.env.MODE === "test") {
+    return createMemoryCloudEntriesClient();
+  }
+  return createSupabaseCloudEntriesClient();
 }
 
 type SeasonSearch = {
@@ -165,23 +178,30 @@ export function App({
   initialStore,
   authClient,
   profileClient,
+  entriesClient,
 }: {
   router?: AnyRouter;
   storageAdapter?: StorageAdapter;
   initialStore?: UnmigratedLocalStore;
   authClient?: AuthClient;
   profileClient?: ProfileClient;
+  entriesClient?: CloudEntriesClient;
 }) {
   const [queryClient] = useState(() => new QueryClient());
   const [resolvedAuthClient] = useState(() => authClient ?? createDefaultAuthClient());
   const [resolvedProfileClient] = useState(() => profileClient ?? createDefaultProfileClient());
+  const [resolvedEntriesClient] = useState(
+    () => entriesClient ?? createDefaultCloudEntriesClient(),
+  );
 
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider authClient={resolvedAuthClient}>
         <ProfileProvider profileClient={resolvedProfileClient}>
           <LocalStoreProvider storageAdapter={storageAdapter} initialStore={initialStore}>
-            <RouterProvider router={router} />
+            <CloudSyncProvider entriesClient={resolvedEntriesClient}>
+              <RouterProvider router={router} />
+            </CloudSyncProvider>
           </LocalStoreProvider>
         </ProfileProvider>
       </AuthProvider>
