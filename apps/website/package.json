@@ -12,6 +12,7 @@
   "dependencies": {
     "@fontsource/barlow": "catalog:",
     "@fontsource/barlow-condensed": "catalog:",
+    "@supabase/supabase-js": "catalog:",
     "@tailwindcss/vite": "catalog:",
     "@tanstack/react-form": "catalog:",
     "@tanstack/react-query": "catalog:",
