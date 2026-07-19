@@ -72,6 +72,13 @@ export function SeasonView({ seasonNumber, onSeasonSelect }: SeasonViewProps) {
               <p className="font-sans text-sm text-primary">
                 NET {formatSigned(summary.seasonNet)}{" "}
                 <span className="text-muted-foreground">· THIS SEASON</span>
+                {isCurrentSeason && summary.deltaLast12Hours !== null && (
+                  <>
+                    <span className="text-muted-foreground"> · </span>
+                    <span>{formatSigned(summary.deltaLast12Hours)}</span>
+                    <span className="text-muted-foreground"> / 12H</span>
+                  </>
+                )}
                 {isCurrentSeason && summary.deltaLast7Days !== null && (
                   <>
                     <span className="text-muted-foreground"> · </span>
@@ -104,11 +111,17 @@ export function SeasonView({ seasonNumber, onSeasonSelect }: SeasonViewProps) {
               <StatRow label="Season high" value={summary.seasonHigh.toLocaleString()} />
               <StatRow label="Season low" value={summary.seasonLow.toLocaleString()} />
               <StatRow label="Season net" value={formatSigned(summary.seasonNet)} accent />
-              <StatRow label="Entry count" value={String(summary.entryCount)} />
               {summary.avgDeltaPerEntry !== null && (
                 <StatRow
                   label="Avg Δ per Entry"
                   value={formatSigned(Math.round(summary.avgDeltaPerEntry))}
+                />
+              )}
+              {isCurrentSeason && summary.deltaLast12Hours !== null && (
+                <StatRow
+                  label="Δ last 12 hours"
+                  value={formatSigned(summary.deltaLast12Hours)}
+                  accent
                 />
               )}
               {isCurrentSeason && summary.deltaLast7Days !== null && (

@@ -372,7 +372,7 @@ test("populated Current Season with one Entry omits sparse summary metrics", asy
           {
             id: "entry-1",
             rs: 5000,
-            recordedAt: "2026-07-15T10:00:00.000Z",
+            recordedAt: "2026-07-17T10:00:00.000Z",
           },
         ],
       }}
@@ -384,9 +384,118 @@ test("populated Current Season with one Entry omits sparse summary metrics", asy
   expect(summary).toHaveTextContent("0");
   expect(summary).toHaveTextContent("5,000");
   expect(screen.queryByText("Avg Δ per Entry")).not.toBeInTheDocument();
+  expect(screen.queryByText("Δ last 12 hours")).not.toBeInTheDocument();
   expect(screen.queryByText("Δ last 7 days")).not.toBeInTheDocument();
+  expect(screen.queryByText("Entry count")).not.toBeInTheDocument();
+  expect(screen.getByLabelText("Season hero")).not.toHaveTextContent("/ 12H");
   expect(summary).toHaveTextContent("Days since last Entry");
-  expect(summary).toHaveTextContent("2");
+  expect(summary).toHaveTextContent("0");
+
+  vi.useRealTimers();
+});
+
+test("Current Season shows Δ last 12 hours when a baseline Entry exists", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date("2026-07-17T12:00:00.000Z"));
+
+  const history = createMemoryHistory({ initialEntries: ["/"] });
+  const router = createAppRouter({ history });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      initialStore={{
+        version: 1,
+        entries: [
+          entryFixture({ id: "baseline-12h", rs: 9000, recordedAt: "2026-07-17T00:00:00.000Z" }),
+          entryFixture({ id: "latest", rs: 10500, recordedAt: "2026-07-17T11:00:00.000Z" }),
+        ],
+      }}
+    />,
+  );
+
+  const summary = await screen.findByLabelText("Season summary");
+  expect(summary).toHaveTextContent("Δ last 12 hours");
+  expect(summary).toHaveTextContent("+1,500");
+  expect(screen.queryByText("Entry count")).not.toBeInTheDocument();
+
+  const hero = screen.getByLabelText("Season hero");
+  expect(hero).toHaveTextContent("+1,500");
+  expect(hero).toHaveTextContent("/ 12H");
+
+  vi.useRealTimers();
+});
+
+test("Current Season hero orders THIS SEASON, 12H, and 7D when both window metrics exist", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date("2026-07-17T12:00:00.000Z"));
+
+  const history = createMemoryHistory({ initialEntries: ["/"] });
+  const router = createAppRouter({ history });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      initialStore={{
+        version: 1,
+        entries: [
+          entryFixture({ id: "baseline-7d", rs: 8000, recordedAt: "2026-07-09T14:00:00.000Z" }),
+          entryFixture({ id: "baseline-12h", rs: 10000, recordedAt: "2026-07-17T00:00:00.000Z" }),
+          entryFixture({ id: "latest", rs: 11500, recordedAt: "2026-07-17T11:30:00.000Z" }),
+        ],
+      }}
+    />,
+  );
+
+  const hero = await screen.findByLabelText("Season hero");
+  const heroText = hero.textContent ?? "";
+  expect(heroText).toContain("THIS SEASON");
+  expect(heroText).toContain("+1,500");
+  expect(heroText).toContain("/ 12H");
+  expect(heroText).toContain("+3,500");
+  expect(heroText).toContain("/ 7D");
+  expect(heroText.indexOf("THIS SEASON")).toBeLessThan(heroText.indexOf("/ 12H"));
+  expect(heroText.indexOf("/ 12H")).toBeLessThan(heroText.indexOf("/ 7D"));
+
+  const summary = screen.getByLabelText("Season summary");
+  expect(summary).toHaveTextContent("Δ last 12 hours");
+  expect(summary).toHaveTextContent("+1,500");
+  expect(summary).toHaveTextContent("Δ last 7 days");
+  expect(summary).toHaveTextContent("+3,500");
+
+  vi.useRealTimers();
+});
+
+test("past Season view omits Δ last 12 hours", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date("2026-07-17T12:00:00.000Z"));
+
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const history = createMemoryHistory({ initialEntries: ["/"] });
+  const router = createAppRouter({ history });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      initialStore={{
+        version: 1,
+        entries: [
+          entryFixture({ id: "s10-old", rs: 7000, recordedAt: "2026-04-01T00:00:00.000Z" }),
+          entryFixture({ id: "s10-recent", rs: 8000, recordedAt: "2026-04-01T12:00:00.000Z" }),
+        ],
+      }}
+    />,
+  );
+
+  await user.click(await screen.findByRole("radio", { name: "S10" }));
+  await screen.findByRole("heading", { name: /^season 10$/i });
+
+  expect(screen.queryByText("Δ last 12 hours")).not.toBeInTheDocument();
+  expect(screen.getByLabelText("Season hero")).not.toHaveTextContent("/ 12H");
+  expect(screen.queryByText("Entry count")).not.toBeInTheDocument();
 
   vi.useRealTimers();
 });
