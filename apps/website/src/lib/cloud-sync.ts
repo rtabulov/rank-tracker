@@ -41,7 +41,9 @@ export async function runSyncPull(input: {
   knownSyncedIds: ReadonlySet<string>;
   userId: string;
   entriesClient: CloudEntriesClient;
+  applyMergeToCloud?: boolean;
 }): Promise<SyncCycleResult> {
+  const applyMergeToCloud = input.applyMergeToCloud ?? true;
   const cloudEntries = await input.entriesClient.listEntries(input.userId);
   const mergeResult = mergeSyncEntries({
     localEntries: input.localEntries,
@@ -51,7 +53,7 @@ export async function runSyncPull(input: {
 
   const nextKnownSyncedIds = new Set(input.knownSyncedIds);
 
-  if (mergeResult.upserts.length > 0) {
+  if (applyMergeToCloud && mergeResult.upserts.length > 0) {
     const pushResult = await input.entriesClient.upsertEntries(input.userId, mergeResult.upserts);
     if (pushResult.error === null) {
       for (const entry of mergeResult.upserts) {
@@ -60,7 +62,7 @@ export async function runSyncPull(input: {
     }
   }
 
-  if (mergeResult.deletes.length > 0) {
+  if (applyMergeToCloud && mergeResult.deletes.length > 0) {
     const deleteResult = await input.entriesClient.deleteEntries(input.userId, mergeResult.deletes);
     if (deleteResult.error === null) {
       for (const id of mergeResult.deletes) {

@@ -26,6 +26,10 @@ type DataSheetProps = {
   authError: string | null;
   magicLinkSent: boolean;
   magicLinkSending: boolean;
+  onClearLocalClick: () => void;
+  onDeleteCloudClick: () => void;
+  onResetEverythingClick: () => void;
+  dataActionError: string | null;
 };
 
 export function DataSheet({
@@ -49,6 +53,10 @@ export function DataSheet({
   authError,
   magicLinkSent,
   magicLinkSending,
+  onClearLocalClick,
+  onDeleteCloudClick,
+  onResetEverythingClick,
+  dataActionError,
 }: DataSheetProps) {
   const signedIn = session !== null;
   const profileReady = profileStatus === "ready";
@@ -153,6 +161,31 @@ export function DataSheet({
             {importError}
           </p>
         )}
+
+        <section
+          className="flex flex-col gap-2 border-t border-border pt-4"
+          aria-label="Data actions"
+        >
+          <p className="text-sm font-medium">Destructive actions</p>
+          <Button type="button" variant="outline" onClick={onClearLocalClick}>
+            Clear local data
+          </Button>
+          {signedIn && isCloudSyncAllowed && (
+            <>
+              <Button type="button" variant="outline" onClick={onDeleteCloudClick}>
+                Delete cloud data
+              </Button>
+              <Button type="button" variant="outline" onClick={onResetEverythingClick}>
+                Reset everything
+              </Button>
+            </>
+          )}
+          {dataActionError !== null && (
+            <p className="text-sm text-destructive" role="alert">
+              {dataActionError}
+            </p>
+          )}
+        </section>
       </div>
     </ViewportOverlay>
   );

@@ -6,6 +6,7 @@ export type CloudEntriesClient = {
   listEntries: (userId: string) => Promise<Entry[]>;
   upsertEntries: (userId: string, entries: Entry[]) => Promise<{ error: string | null }>;
   deleteEntries: (userId: string, ids: string[]) => Promise<{ error: string | null }>;
+  deleteAllEntries: (userId: string) => Promise<{ error: string | null }>;
 };
 
 type CloudEntryRow = {
@@ -85,6 +86,13 @@ export function createMemoryCloudEntriesClient(
       }
       return { error: null };
     },
+    deleteAllEntries: async (userId) => {
+      if (options?.failDelete) {
+        return { error: "Cloud delete failed." };
+      }
+      store.delete(userId);
+      return { error: null };
+    },
   };
 }
 
@@ -130,6 +138,11 @@ export function createSupabaseCloudEntriesClient(
       }
 
       const { error } = await client.from("entries").delete().eq("user_id", userId).in("id", ids);
+
+      return { error: error?.message ?? null };
+    },
+    deleteAllEntries: async (userId) => {
+      const { error } = await client.from("entries").delete().eq("user_id", userId);
 
       return { error: error?.message ?? null };
     },

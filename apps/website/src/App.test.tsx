@@ -6,8 +6,9 @@ import { App, createAppRouter } from "./App.tsx";
 import { createMemoryAuthClient } from "./lib/auth";
 import { createMemoryCloudEntriesClient } from "./lib/cloud-entries";
 import { createMemoryProfileClient } from "./lib/profile";
-import { createMemoryStorageAdapter } from "./lib/local-store";
+import { createMemoryStorageAdapter, LOCAL_STORE_KEY } from "./lib/local-store";
 import { APP_SCHEMA_VERSION } from "./lib/schema";
+import { SYNC_STATE_KEY } from "./lib/sync-state";
 
 const CURRENT_SEASON_NUMBER = 11;
 
@@ -1903,4 +1904,222 @@ test("failed cloud delete keeps local delete and retries on focus", async () => 
   await waitFor(() => {
     expect(screen.queryByRole("status", { name: "Cloud sync pending" })).not.toBeInTheDocument();
   });
+});
+
+test("Clear local data wipes Local store and sync bookkeeping without deleting cloud Entries", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient, entriesClient, userId } = createSignedInClients({
+    displayName: "FinalsFan",
+  });
+  const localEntry = entryFixture({
+    id: "clear-local-keep-cloud",
+    rs: 42000,
+    recordedAt: "2026-07-15T10:00:00.000Z",
+  });
+  entriesClient.setEntries(userId, [localEntry]);
+  const storageAdapter = createMemoryStorageAdapter({
+    version: APP_SCHEMA_VERSION,
+    entries: [localEntry],
+  });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={storageAdapter}
+      authClient={authClient}
+      profileClient={profileClient}
+      entriesClient={entriesClient}
+    />,
+  );
+
+  await screen.findByLabelText("Season hero");
+
+  await user.click(screen.getByRole("button", { name: "Data" }));
+  const data = await screen.findByRole("dialog", { name: "Data" });
+  await user.click(within(data).getByRole("button", { name: "Clear local data" }));
+
+  const confirm = await screen.findByRole("dialog", { name: "Clear local data" });
+  await user.click(within(confirm).getByRole("button", { name: "Clear local data" }));
+
+  expect(await screen.findByLabelText("Season hero")).toHaveTextContent("—");
+  expect(entriesClient.getEntries(userId)).toEqual([localEntry]);
+  expect(JSON.parse(storageAdapter.getItem(LOCAL_STORE_KEY) ?? "{}").entries).toEqual([]);
+  expect(JSON.parse(storageAdapter.getItem(SYNC_STATE_KEY) ?? "{}")).toEqual({
+    knownSyncedIds: [],
+    syncedEntries: [],
+    pendingOps: [],
+  });
+
+  window.dispatchEvent(new Event("focus"));
+
+  expect(screen.getByLabelText("Season hero")).toHaveTextContent("—");
+  expect(entriesClient.getEntries(userId)).toEqual([localEntry]);
+});
+
+test("signed-out Data sheet offers Clear local data but not Delete cloud data", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={createMemoryAuthClient()}
+    />,
+  );
+
+  await user.click(await screen.findByRole("button", { name: "Data" }));
+  const data = await screen.findByRole("dialog", { name: "Data" });
+
+  expect(within(data).getByRole("button", { name: "Clear local data" })).toBeInTheDocument();
+  expect(within(data).queryByRole("button", { name: "Delete cloud data" })).not.toBeInTheDocument();
+  expect(within(data).queryByRole("button", { name: "Reset everything" })).not.toBeInTheDocument();
+});
+
+test("Delete cloud data removes cloud Entries but keeps Local store and signed-in session", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient, entriesClient, userId } = createSignedInClients({
+    displayName: "FinalsFan",
+  });
+  const syncedEntry = entryFixture({
+    id: "delete-cloud-keep-local",
+    rs: 43000,
+    recordedAt: "2026-07-15T10:00:00.000Z",
+  });
+  entriesClient.setEntries(userId, [syncedEntry]);
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter({
+        version: APP_SCHEMA_VERSION,
+        entries: [syncedEntry],
+      })}
+      authClient={authClient}
+      profileClient={profileClient}
+      entriesClient={entriesClient}
+    />,
+  );
+
+  expect(await screen.findByLabelText("Season hero")).toHaveTextContent("43,000");
+
+  await user.click(screen.getByRole("button", { name: "Data" }));
+  const data = await screen.findByRole("dialog", { name: "Data" });
+  await user.click(within(data).getByRole("button", { name: "Delete cloud data" }));
+
+  const confirm = await screen.findByRole("dialog", { name: "Delete cloud data" });
+  await user.click(within(confirm).getByRole("button", { name: "Delete cloud data" }));
+
+  await waitFor(() => {
+    expect(entriesClient.getEntries(userId)).toEqual([]);
+  });
+  expect(screen.getByLabelText("Season hero")).toHaveTextContent("43,000");
+
+  const dataAfterDelete = await screen.findByRole("dialog", { name: "Data" });
+  expect(within(dataAfterDelete).getByText("Signed in as player@example.com")).toBeInTheDocument();
+
+  window.dispatchEvent(new Event("focus"));
+
+  await waitFor(() => {
+    expect(entriesClient.getEntries(userId)).toEqual([]);
+  });
+  expect(screen.getByLabelText("Season hero")).toHaveTextContent("43,000");
+});
+
+test("Reset everything requires typed confirmation and clears local and cloud Entries", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient, entriesClient, userId } = createSignedInClients({
+    displayName: "FinalsFan",
+  });
+  const syncedEntry = entryFixture({
+    id: "reset-all",
+    rs: 44000,
+    recordedAt: "2026-07-15T10:00:00.000Z",
+  });
+  entriesClient.setEntries(userId, [syncedEntry]);
+  const storageAdapter = createMemoryStorageAdapter({
+    version: APP_SCHEMA_VERSION,
+    entries: [syncedEntry],
+  });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={storageAdapter}
+      authClient={authClient}
+      profileClient={profileClient}
+      entriesClient={entriesClient}
+    />,
+  );
+
+  await screen.findByLabelText("Season hero");
+
+  await user.click(screen.getByRole("button", { name: "Data" }));
+  const data = await screen.findByRole("dialog", { name: "Data" });
+  await user.click(within(data).getByRole("button", { name: "Reset everything" }));
+
+  const confirm = await screen.findByRole("dialog", { name: "Reset everything" });
+  const resetButton = within(confirm).getByRole("button", { name: "Reset everything" });
+  expect(resetButton).toBeDisabled();
+
+  await user.type(within(confirm).getByLabelText(/^type reset to confirm$/i), "RESET");
+  await user.click(resetButton);
+
+  await waitFor(() => {
+    expect(entriesClient.getEntries(userId)).toEqual([]);
+  });
+  expect(await screen.findByLabelText("Season hero")).toHaveTextContent("—");
+  expect(JSON.parse(storageAdapter.getItem(LOCAL_STORE_KEY) ?? "{}").entries).toEqual([]);
+});
+
+test("Reset everything confirmation cancel leaves local and cloud Entries unchanged", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient, entriesClient, userId } = createSignedInClients({
+    displayName: "FinalsFan",
+  });
+  const syncedEntry = entryFixture({
+    id: "reset-cancel",
+    rs: 45000,
+    recordedAt: "2026-07-15T10:00:00.000Z",
+  });
+  entriesClient.setEntries(userId, [syncedEntry]);
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter({
+        version: APP_SCHEMA_VERSION,
+        entries: [syncedEntry],
+      })}
+      authClient={authClient}
+      profileClient={profileClient}
+      entriesClient={entriesClient}
+    />,
+  );
+
+  expect(await screen.findByLabelText("Season hero")).toHaveTextContent("45,000");
+
+  await user.click(screen.getByRole("button", { name: "Data" }));
+  const data = await screen.findByRole("dialog", { name: "Data" });
+  await user.click(within(data).getByRole("button", { name: "Reset everything" }));
+
+  const confirm = await screen.findByRole("dialog", { name: "Reset everything" });
+  await user.click(within(confirm).getAllByRole("button", { name: "Cancel" })[0]!);
+
+  expect(screen.getByLabelText("Season hero")).toHaveTextContent("45,000");
+  expect(entriesClient.getEntries(userId)).toEqual([syncedEntry]);
+
+  const dataAfterCancel = await screen.findByRole("dialog", { name: "Data" });
+  expect(
+    within(dataAfterCancel).getByRole("button", { name: "Reset everything" }),
+  ).toBeInTheDocument();
 });

@@ -25,13 +25,26 @@ import {
   withSyncedEntries,
   type SyncState,
 } from "@/lib/sync-state";
+import {
+  clearLocalDataOnDevice,
+  deleteAllCloudEntries,
+  localEntriesSnapshot,
+} from "@/lib/data-actions";
 import type { Entry } from "@/lib/types";
 
 type CloudSyncContextValue = {
   pendingSyncCount: number;
+  clearLocalData: () => void;
+  deleteCloudData: () => Promise<{ error: string | null }>;
+  resetEverything: () => Promise<{ error: string | null }>;
 };
 
-const CloudSyncContext = createContext<CloudSyncContextValue>({ pendingSyncCount: 0 });
+const CloudSyncContext = createContext<CloudSyncContextValue>({
+  pendingSyncCount: 0,
+  clearLocalData: () => {},
+  deleteCloudData: async () => ({ error: null }),
+  resetEverything: async () => ({ error: null }),
+});
 
 export function useCloudSync() {
   return useContext(CloudSyncContext);
@@ -57,6 +70,8 @@ export function CloudSyncProvider({
   const storeEntriesRef = useRef(store.entries);
   const storeVersionRef = useRef(store.version);
   const skipPushRef = useRef(false);
+  const suppressPullUpsertsRef = useRef(false);
+  const suppressPullMergeRef = useRef(false);
   const [pendingSyncCount, setPendingSyncCount] = useState(() =>
     pendingOpsCount(syncStateRef.current.pendingOps),
   );
@@ -187,7 +202,7 @@ export function CloudSyncProvider({
     };
 
     const pull = async () => {
-      if (!navigator.onLine) {
+      if (!navigator.onLine || suppressPullMergeRef.current) {
         return;
       }
 
@@ -196,6 +211,7 @@ export function CloudSyncProvider({
         knownSyncedIds: toKnownSyncedSet(syncStateRef.current),
         userId: session.userId,
         entriesClient,
+        applyMergeToCloud: !suppressPullUpsertsRef.current,
       });
 
       if (cancelled) {
@@ -204,7 +220,7 @@ export function CloudSyncProvider({
 
       saveSyncStateRef(withKnownSyncedIds(syncStateRef.current, result.knownSyncedIds));
 
-      if (result.changed) {
+      if (result.changed && !suppressPullMergeRef.current) {
         skipPushRef.current = true;
         syncedEntriesRef.current = result.entries;
         storeEntriesRef.current = result.entries;
@@ -333,7 +349,63 @@ export function CloudSyncProvider({
     };
   }, [entriesClient, isCloudSyncAllowed, session, storageAdapter, store.entries]);
 
+  const clearLocalData = () => {
+    skipPushRef.current = true;
+    suppressPullMergeRef.current = session !== null && isCloudSyncAllowed;
+    syncedEntriesRef.current = [];
+    storeEntriesRef.current = [];
+    saveSyncStateRef(createEmptySyncState());
+    clearLocalDataOnDevice({ setStore });
+  };
+
+  const deleteCloudData = async (): Promise<{ error: string | null }> => {
+    if (session === null || !isCloudSyncAllowed) {
+      return { error: "Sign in with cloud sync ready to delete cloud data." };
+    }
+
+    const deleteResult = await deleteAllCloudEntries({
+      userId: session.userId,
+      entriesClient,
+    });
+
+    if (deleteResult.error !== null) {
+      return deleteResult;
+    }
+
+    suppressPullUpsertsRef.current = true;
+    const localSnapshot = localEntriesSnapshot(storeEntriesRef.current);
+    syncedEntriesRef.current = localSnapshot;
+    saveSyncStateRef(
+      withSyncedEntries(
+        withKnownSyncedIds(withPendingOps(createEmptySyncState(), []), new Set()),
+        localSnapshot,
+      ),
+    );
+
+    return { error: null };
+  };
+
+  const resetEverything = async (): Promise<{ error: string | null }> => {
+    if (session !== null && isCloudSyncAllowed) {
+      const deleteResult = await deleteAllCloudEntries({
+        userId: session.userId,
+        entriesClient,
+      });
+      if (deleteResult.error !== null) {
+        return deleteResult;
+      }
+    }
+
+    suppressPullUpsertsRef.current = false;
+    clearLocalData();
+    return { error: null };
+  };
+
   return (
-    <CloudSyncContext.Provider value={{ pendingSyncCount }}>{children}</CloudSyncContext.Provider>
+    <CloudSyncContext.Provider
+      value={{ pendingSyncCount, clearLocalData, deleteCloudData, resetEverything }}
+    >
+      {children}
+    </CloudSyncContext.Provider>
   );
 }
