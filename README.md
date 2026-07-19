@@ -17,7 +17,7 @@ All data is stored in `localStorage` on your device. There is no account or serv
 
 ## Development
 
-Requires Node ≥ 22.18 and pnpm 11.13 (managed by Vite+).
+Requires Node ≥ 22.18. Use Vite+ (`vp`) for install, scripts, and checks — not pnpm/npm directly.
 
 ```bash
 vp install

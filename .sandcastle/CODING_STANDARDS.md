@@ -4,9 +4,9 @@ Sandcastle-facing digest of this repo's conventions. Prefer the linked docs when
 
 ## Tooling
 
-- Package manager / toolchain: **Vite+** via `vp` (not raw npm/yarn for project scripts). See root `AGENTS.md`.
+- Package manager / toolchain: **Vite+** via `vp` (not raw pnpm/npm/yarn for project scripts or CI). See root `AGENTS.md`.
 - Install: `vp install`. Validate: `vp check`, `vp test`, and for a full gate `vp run ready`.
-- Workspace layout: `apps/*`, `packages/*`, `tools/*` (pnpm workspace + catalog).
+- Workspace layout: `apps/*`, `packages/*`, `tools/*` (Vite+ / pnpm-workspace catalog under the hood).
 
 ## Testing (TDD)
 
