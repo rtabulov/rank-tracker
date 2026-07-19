@@ -4,9 +4,17 @@ type RsSparklineProps = {
   entries: Entry[];
   height?: number;
   className?: string;
+  showDots?: boolean;
+  showArea?: boolean;
 };
 
-export function RsSparkline({ entries, height = 72, className }: RsSparklineProps) {
+export function RsSparkline({
+  entries,
+  height = 72,
+  className,
+  showDots = true,
+  showArea = false,
+}: RsSparklineProps) {
   const width = 600;
   const pad = 12;
   const rsValues = entries.map((entry) => entry.rs);
@@ -14,13 +22,14 @@ export function RsSparkline({ entries, height = 72, className }: RsSparklineProp
   const max = Math.max(...rsValues);
   const span = Math.max(max - min, 1);
 
-  const points = entries
-    .map((entry, index) => {
-      const x = pad + (index / Math.max(entries.length - 1, 1)) * (width - pad * 2);
-      const y = pad + (1 - (entry.rs - min) / span) * (height - pad * 2);
-      return `${x},${y}`;
-    })
-    .join(" ");
+  const coords = entries.map((entry, index) => {
+    const x = pad + (index / Math.max(entries.length - 1, 1)) * (width - pad * 2);
+    const y = pad + (1 - (entry.rs - min) / span) * (height - pad * 2);
+    return { x, y, id: entry.id };
+  });
+
+  const points = coords.map((c) => `${c.x},${c.y}`).join(" ");
+  const area = `${pad},${height - pad} ${points} ${width - pad},${height - pad}`;
 
   return (
     <svg
@@ -29,6 +38,7 @@ export function RsSparkline({ entries, height = 72, className }: RsSparklineProp
       role="presentation"
       aria-hidden="true"
     >
+      {showArea && <polygon points={area} fill="currentColor" opacity="0.2" />}
       <polyline
         fill="none"
         stroke="currentColor"
@@ -37,11 +47,8 @@ export function RsSparkline({ entries, height = 72, className }: RsSparklineProp
         strokeLinecap="round"
         points={points}
       />
-      {entries.map((entry, index) => {
-        const x = pad + (index / Math.max(entries.length - 1, 1)) * (width - pad * 2);
-        const y = pad + (1 - (entry.rs - min) / span) * (height - pad * 2);
-        return <circle key={entry.id} cx={x} cy={y} r="4" fill="currentColor" />;
-      })}
+      {showDots &&
+        coords.map((c) => <circle key={c.id} cx={c.x} cy={c.y} r="4" fill="currentColor" />)}
     </svg>
   );
 }

@@ -10,7 +10,8 @@
     "test": "vp test"
   },
   "dependencies": {
-    "@fontsource-variable/geist": "catalog:",
+    "@fontsource/barlow": "catalog:",
+    "@fontsource/barlow-condensed": "catalog:",
     "@tailwindcss/vite": "catalog:",
     "@tanstack/react-form": "catalog:",
     "@tanstack/react-query": "catalog:",

@@ -242,6 +242,40 @@ test("populated Current Season with one Entry omits sparse summary metrics", asy
   vi.useRealTimers();
 });
 
+test("populated season shows broadcast scoreboard chrome and entry deltas", async () => {
+  const history = createMemoryHistory({ initialEntries: ["/rank-tracker/"] });
+  const router = createAppRouter({ history });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      initialStore={{
+        version: 1,
+        entries: [
+          {
+            id: "entry-a",
+            rs: 10000,
+            recordedAt: "2026-07-14T10:00:00.000Z",
+          },
+          {
+            id: "entry-b",
+            rs: 12500,
+            recordedAt: "2026-07-16T10:00:00.000Z",
+          },
+        ],
+      }}
+    />,
+  );
+
+  expect(await screen.findByRole("heading", { name: "Season board" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Entry timeline" })).toBeInTheDocument();
+  expect(screen.getByText(/season up/i)).toBeInTheDocument();
+  expect(screen.getByLabelText("Season hero")).toHaveTextContent("12,500");
+  expect(screen.getByLabelText("Season hero")).toHaveTextContent("+2,500");
+  expect(screen.getByLabelText("Entry timeline")).toHaveTextContent("+2,500");
+});
+
 test("Entries survive remount via the Local store", async () => {
   const user = userEvent.setup();
   const storageAdapter = createMemoryStorageAdapter();
