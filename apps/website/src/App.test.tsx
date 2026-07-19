@@ -245,6 +245,52 @@ test("Log RS opens overlay with Save and recordedAt fields", async () => {
   expect(screen.getByLabelText(/^recorded at$/i)).toBeInTheDocument();
 });
 
+test("Log RS focuses RS input when overlay opens", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/"] });
+  const router = createAppRouter({ history });
+
+  render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
+
+  await user.click(await screen.findByRole("button", { name: "Log RS" }));
+
+  const rsInput = await screen.findByLabelText(/^rs$/i);
+  expect(document.activeElement).toBe(rsInput);
+  expect(rsInput).toHaveFocus();
+});
+
+test("Log RS focuses RS input when overlay reopens", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/"] });
+  const router = createAppRouter({ history });
+
+  render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
+
+  await user.click(await screen.findByRole("button", { name: "Log RS" }));
+  expect(await screen.findByLabelText(/^rs$/i)).toHaveFocus();
+
+  await user.keyboard("{Escape}");
+  expect(screen.queryByRole("dialog", { name: "Log RS" })).not.toBeInTheDocument();
+
+  await user.click(await screen.findByRole("button", { name: "Log RS" }));
+  expect(await screen.findByLabelText(/^rs$/i)).toHaveFocus();
+});
+
+test("Log RS Cancel remains reachable from RS input via Shift+Tab", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/"] });
+  const router = createAppRouter({ history });
+
+  render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
+
+  await user.click(await screen.findByRole("button", { name: "Log RS" }));
+  expect(await screen.findByLabelText(/^rs$/i)).toHaveFocus();
+
+  await user.tab({ shift: true });
+
+  expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
+});
+
 test("Escape dismisses Log RS overlay without saving", async () => {
   const user = userEvent.setup();
   const history = createMemoryHistory({ initialEntries: ["/"] });
@@ -402,7 +448,7 @@ test("Entries survive remount via the Local store", async () => {
   expect(screen.getByLabelText("RS sparkline")).toBeInTheDocument();
 });
 
-test("Log RS overlay uses drawer chrome on narrow viewports", async () => {
+function mockNarrowViewport() {
   const previousMatchMedia = window.matchMedia;
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
@@ -419,6 +465,18 @@ test("Log RS overlay uses drawer chrome on narrow viewports", async () => {
     }),
   });
 
+  return () => {
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      writable: true,
+      value: previousMatchMedia,
+    });
+  };
+}
+
+test("Log RS overlay uses drawer chrome on narrow viewports", async () => {
+  const restoreMatchMedia = mockNarrowViewport();
+
   try {
     const user = userEvent.setup();
     const history = createMemoryHistory({ initialEntries: ["/"] });
@@ -433,11 +491,27 @@ test("Log RS overlay uses drawer chrome on narrow viewports", async () => {
       "drawer",
     );
   } finally {
-    Object.defineProperty(window, "matchMedia", {
-      configurable: true,
-      writable: true,
-      value: previousMatchMedia,
-    });
+    restoreMatchMedia();
+  }
+});
+
+test("Log RS focuses RS input when drawer opens on narrow viewports", async () => {
+  const restoreMatchMedia = mockNarrowViewport();
+
+  try {
+    const user = userEvent.setup();
+    const history = createMemoryHistory({ initialEntries: ["/"] });
+    const router = createAppRouter({ history });
+
+    render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
+
+    await user.click(await screen.findByRole("button", { name: "Log RS" }));
+
+    const rsInput = await screen.findByLabelText(/^rs$/i);
+    expect(document.activeElement).toBe(rsInput);
+    expect(rsInput).toHaveFocus();
+  } finally {
+    restoreMatchMedia();
   }
 });
 
@@ -1042,6 +1116,70 @@ test("Edit on an Entry row opens Edit overlay with editable rs and recordedAt", 
   expect(screen.getByRole("button", { name: "Delete" })).toBeInTheDocument();
   expect(screen.getByLabelText(/^rs$/i)).toHaveValue("42000");
   expect(screen.getByLabelText(/^recorded at$/i)).toBeInTheDocument();
+});
+
+test("Edit Entry focuses RS input when overlay opens", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/"] });
+  const router = createAppRouter({ history });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      initialStore={{
+        version: 1,
+        entries: [
+          {
+            id: "entry-edit-1",
+            rs: 42000,
+            recordedAt: "2026-07-15T10:00:00.000Z",
+          },
+        ],
+      }}
+    />,
+  );
+
+  await user.click(await screen.findByRole("button", { name: "Edit entry-edit-1" }));
+
+  const rsInput = await screen.findByLabelText(/^rs$/i);
+  expect(document.activeElement).toBe(rsInput);
+  expect(rsInput).toHaveFocus();
+});
+
+test("Edit Entry focuses RS input when drawer opens on narrow viewports", async () => {
+  const restoreMatchMedia = mockNarrowViewport();
+
+  try {
+    const user = userEvent.setup();
+    const history = createMemoryHistory({ initialEntries: ["/"] });
+    const router = createAppRouter({ history });
+
+    render(
+      <App
+        router={router}
+        storageAdapter={createMemoryStorageAdapter()}
+        initialStore={{
+          version: 1,
+          entries: [
+            {
+              id: "entry-edit-1",
+              rs: 42000,
+              recordedAt: "2026-07-15T10:00:00.000Z",
+            },
+          ],
+        }}
+      />,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "Edit entry-edit-1" }));
+
+    const rsInput = await screen.findByLabelText(/^rs$/i);
+    expect(document.activeElement).toBe(rsInput);
+    expect(rsInput).toHaveFocus();
+  } finally {
+    restoreMatchMedia();
+  }
 });
 
 test("saving Edit Entry persists changes with stable id", async () => {

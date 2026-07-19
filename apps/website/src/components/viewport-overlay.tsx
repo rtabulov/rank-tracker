@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode, type RefObject } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -31,6 +31,7 @@ type ViewportOverlayProps = {
   titleId: string;
   onClose: () => void;
   children: ReactNode;
+  initialFocusRef?: RefObject<HTMLElement | null>;
 };
 
 function OverlayChrome({
@@ -58,6 +59,7 @@ export function ViewportOverlay({
   titleId: _titleId,
   onClose,
   children,
+  initialFocusRef,
 }: ViewportOverlayProps) {
   const isMobile = useIsMobileViewport();
   const variant = isMobile ? "drawer" : "dialog";
@@ -72,6 +74,15 @@ export function ViewportOverlay({
     }
   };
 
+  const handleOpenAutoFocus = (event: Event) => {
+    if (!initialFocusRef?.current) {
+      return;
+    }
+
+    event.preventDefault();
+    initialFocusRef.current.focus();
+  };
+
   if (isMobile) {
     return (
       <Sheet open onOpenChange={handleOpenChange}>
@@ -80,6 +91,7 @@ export function ViewportOverlay({
           showCloseButton={false}
           data-overlay-variant={variant}
           className="max-w-lg gap-4 rounded-t-xl border border-border bg-background p-6"
+          onOpenAutoFocus={handleOpenAutoFocus}
         >
           <SheetHeader className="p-0">
             <OverlayChrome title={title} onClose={onClose} Title={SheetTitle} />
@@ -96,6 +108,7 @@ export function ViewportOverlay({
         showCloseButton={false}
         data-overlay-variant={variant}
         className="max-w-md gap-4 rounded-xl border border-border bg-background p-6 shadow-lg sm:max-w-md"
+        onOpenAutoFocus={handleOpenAutoFocus}
       >
         <DialogHeader className="gap-0">
           <OverlayChrome title={title} onClose={onClose} Title={DialogTitle} />

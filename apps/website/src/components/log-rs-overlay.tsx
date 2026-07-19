@@ -1,5 +1,5 @@
 import { useForm } from "@tanstack/react-form";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +21,7 @@ type LogRsOverlayProps = {
 
 export function LogRsOverlay({ open, seasonNumber, onClose, onSaved }: LogRsOverlayProps) {
   const currentSeasonNumber = getCurrentSeason().number;
+  const rsInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm({
     defaultValues: {
@@ -58,7 +59,13 @@ export function LogRsOverlay({ open, seasonNumber, onClose, onSaved }: LogRsOver
   }, [form, open]);
 
   return (
-    <ViewportOverlay open={open} title="Log RS" titleId="log-rs-title" onClose={onClose}>
+    <ViewportOverlay
+      open={open}
+      title="Log RS"
+      titleId="log-rs-title"
+      onClose={onClose}
+      initialFocusRef={rsInputRef}
+    >
       <form
         className="flex flex-col gap-4"
         onSubmit={(event) => {
@@ -72,6 +79,7 @@ export function LogRsOverlay({ open, seasonNumber, onClose, onSaved }: LogRsOver
             <div className="flex flex-col gap-1.5">
               <Label htmlFor={field.name}>RS</Label>
               <Input
+                ref={rsInputRef}
                 id={field.name}
                 name={field.name}
                 inputMode="numeric"

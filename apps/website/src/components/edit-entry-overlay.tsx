@@ -1,5 +1,5 @@
 import { useForm } from "@tanstack/react-form";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,6 +30,7 @@ export function EditEntryOverlay({
   onDeleteRequest,
 }: EditEntryOverlayProps) {
   const currentSeasonNumber = getCurrentSeason().number;
+  const rsInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm({
     defaultValues: {
@@ -68,7 +69,13 @@ export function EditEntryOverlay({
   }, [entry.id, entry.recordedAt, entry.rs, form, open]);
 
   return (
-    <ViewportOverlay open={open} title="Edit Entry" titleId="edit-entry-title" onClose={onClose}>
+    <ViewportOverlay
+      open={open}
+      title="Edit Entry"
+      titleId="edit-entry-title"
+      onClose={onClose}
+      initialFocusRef={rsInputRef}
+    >
       <form
         className="flex flex-col gap-4"
         onSubmit={(event) => {
@@ -82,6 +89,7 @@ export function EditEntryOverlay({
             <div className="flex flex-col gap-1.5">
               <Label htmlFor={field.name}>RS</Label>
               <Input
+                ref={rsInputRef}
                 id={field.name}
                 name={field.name}
                 inputMode="numeric"
