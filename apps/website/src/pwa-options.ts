@@ -35,8 +35,21 @@ export const websitePwaOptions = {
     ],
   },
   workbox: {
-    // Shell precache only — no API/offline data runtime routes.
-    runtimeCaching: [],
+    // Exclude the HTML shell from precache; navigation uses NetworkFirst below.
+    // Hashed /assets/* and root static files still use default precache patterns.
+    globIgnores: ["**/index.html"],
+    runtimeCaching: [
+      {
+        urlPattern: ({ request }) => request.mode === "navigate",
+        handler: "NetworkFirst",
+        options: {
+          cacheName: "shell-navigation",
+          expiration: {
+            maxEntries: 1,
+          },
+        },
+      },
+    ],
     navigateFallback: "/index.html",
   },
 } satisfies Partial<VitePWAOptions>;
