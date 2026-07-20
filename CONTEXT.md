@@ -61,5 +61,13 @@ The person whose Rank Score history this Local store represents.
 _Avoid_: User, account holder, member
 
 **Display name**:
-The Player's chosen public handle, unique among signed-in Players; required before cloud sync.
+The Player's chosen public handle, unique among signed-in Players; required before cloud sync. Format is URL-safe (letters, numbers, underscores, hyphens; length-bounded) and immutable once set.
 _Avoid_: Username, handle, nickname, gamertag
+
+**Public Season view**:
+A read-only Season view of another Player's synced Entries, reached via their Public link. Same Season-view shape as the owner's (hero, sparkline, Season summary, Entry timeline, Season browsing); no Log RS, Import/Export, or edit. Opt-in only. On Current Season with 0 Entries: same empty chrome as the owner (hero empty signal, omitted sparkline/summary, timeline region kept) with visitor copy (“No RS logged yet.” / “No Entries yet.”) and a light path to track your own RS instead of Log RS. Past Seasons with 0 Entries are non-navigable (snap to Current Season), same as the owner.
+_Avoid_: Profile, public profile, shared dashboard, spectator view
+
+**Public link**:
+The shareable URL for a Player's Public Season view, keyed by Display name (`/p/{displayName}`). Copied from account settings next to Display name when public sharing is on. Unknown or private Display names are indistinguishable to a visitor: one dedicated unavailable state in the app shell (not Season-view chrome) — “Public Season view unavailable” / “This Public link isn’t available.” — plus the light track-your-own-RS path.
+_Avoid_: Profile URL, share URL, vanity URL, handle link
