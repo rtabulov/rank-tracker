@@ -6,6 +6,7 @@ import { App, createAppRouter } from "./App.tsx";
 import { createMemoryAuthClient } from "./lib/auth";
 import { createMemoryCloudEntriesClient } from "./lib/cloud-entries";
 import { createMemoryProfileClient } from "./lib/profile";
+import { createMemoryPublicSeasonClient, type PublicSeasonClient } from "./lib/public-season";
 import { createMemoryStorageAdapter, LOCAL_STORE_KEY } from "./lib/local-store";
 import { APP_SCHEMA_VERSION } from "./lib/schema";
 import { SYNC_STATE_KEY } from "./lib/sync-state";
@@ -2606,4 +2607,296 @@ test("Reset everything confirmation cancel leaves local and cloud Entries unchan
   expect(
     within(dataAfterCancel).getByRole("button", { name: "Reset everything" }),
   ).toBeInTheDocument();
+});
+
+function createPublicSeasonClient(input?: {
+  players?: Record<
+    string,
+    {
+      displayName: string;
+      isPublic: boolean;
+      entries: ReturnType<typeof entryFixture>[];
+    }
+  >;
+}): PublicSeasonClient {
+  return createMemoryPublicSeasonClient({ players: input?.players });
+}
+
+test("unknown Public link shows the unavailable shell with Track your own RS", async () => {
+  const history = createMemoryHistory({ initialEntries: ["/p/unknown-player"] });
+  const router = createAppRouter({ history });
+  const publicSeasonClient = createPublicSeasonClient();
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      publicSeasonClient={publicSeasonClient}
+    />,
+  );
+
+  expect(
+    await screen.findByRole("heading", { name: "Public Season view unavailable" }),
+  ).toBeInTheDocument();
+  expect(screen.getByText("This Public link isn’t available.")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Track your own RS" })).toHaveAttribute("href", "/");
+  expect(screen.queryByLabelText("Season hero")).not.toBeInTheDocument();
+});
+
+test("private Public link shows the same unavailable shell as an unknown name", async () => {
+  const history = createMemoryHistory({ initialEntries: ["/p/PrivateFan"] });
+  const router = createAppRouter({ history });
+  const publicSeasonClient = createPublicSeasonClient({
+    players: {
+      PrivateFan: {
+        displayName: "PrivateFan",
+        isPublic: false,
+        entries: [
+          entryFixture({ id: "hidden", rs: 30000, recordedAt: "2026-07-16T10:00:00.000Z" }),
+        ],
+      },
+    },
+  });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      publicSeasonClient={publicSeasonClient}
+    />,
+  );
+
+  expect(
+    await screen.findByRole("heading", { name: "Public Season view unavailable" }),
+  ).toBeInTheDocument();
+  expect(screen.getByText("This Public link isn’t available.")).toBeInTheDocument();
+  expect(screen.queryByLabelText("Season hero")).not.toBeInTheDocument();
+});
+
+test("invalid Public link display name shows unavailable without calling public read", async () => {
+  const history = createMemoryHistory({ initialEntries: ["/p/ab"] });
+  const router = createAppRouter({ history });
+  const getPublicSeason = vi.fn(async () => ({
+    displayName: "ab",
+    entries: [],
+  }));
+  const publicSeasonClient: PublicSeasonClient = { getPublicSeason };
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      publicSeasonClient={publicSeasonClient}
+    />,
+  );
+
+  expect(
+    await screen.findByRole("heading", { name: "Public Season view unavailable" }),
+  ).toBeInTheDocument();
+  expect(getPublicSeason).not.toHaveBeenCalled();
+});
+
+test("populated Public Season view renders read-only Season chrome with Viewing strip", async () => {
+  const history = createMemoryHistory({ initialEntries: ["/p/FinalsFan"] });
+  const router = createAppRouter({ history });
+  const publicSeasonClient = createPublicSeasonClient({
+    players: {
+      FinalsFan: {
+        displayName: "FinalsFan",
+        isPublic: true,
+        entries: [
+          entryFixture({ id: "public-entry", rs: 33000, recordedAt: "2026-07-16T10:00:00.000Z" }),
+        ],
+      },
+    },
+  });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      publicSeasonClient={publicSeasonClient}
+    />,
+  );
+
+  expect(await screen.findByLabelText("Viewing")).toHaveTextContent("FinalsFan");
+  expect(await screen.findByLabelText("Season hero")).toHaveTextContent("33,000");
+  expect(screen.getByRole("link", { name: "Track your own RS →" })).toHaveAttribute("href", "/");
+  expect(screen.queryByRole("button", { name: "Log RS" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Edit public-entry" })).not.toBeInTheDocument();
+});
+
+test("empty Current Season Public view uses visitor empty copy and no Log RS", async () => {
+  const history = createMemoryHistory({ initialEntries: ["/p/EmptyFan"] });
+  const router = createAppRouter({ history });
+  const publicSeasonClient = createPublicSeasonClient({
+    players: {
+      EmptyFan: {
+        displayName: "EmptyFan",
+        isPublic: true,
+        entries: [],
+      },
+    },
+  });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      publicSeasonClient={publicSeasonClient}
+    />,
+  );
+
+  expect(await screen.findByLabelText("Viewing")).toHaveTextContent("EmptyFan");
+  expect(
+    await screen.findByRole("heading", { name: /season 11 \(current\)/i }),
+  ).toBeInTheDocument();
+  expect(screen.getByText("No RS logged yet.")).toBeInTheDocument();
+  expect(screen.getByText("No Entries yet.")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Log RS" })).not.toBeInTheDocument();
+});
+
+test("Public Season view applies navigable Season rules to synced Entries", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/p/FinalsFan?season=11"] });
+  const router = createAppRouter({ history });
+  const publicSeasonClient = createPublicSeasonClient({
+    players: {
+      FinalsFan: {
+        displayName: "FinalsFan",
+        isPublic: true,
+        entries: [
+          entryFixture({ id: "s10-entry", rs: 8000, recordedAt: "2026-04-01T10:00:00.000Z" }),
+        ],
+      },
+    },
+  });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      publicSeasonClient={publicSeasonClient}
+    />,
+  );
+
+  await screen.findByRole("radio", { name: "S11*" });
+  expect(screen.getByRole("radio", { name: "S10" })).toBeInTheDocument();
+  expect(screen.queryByRole("radio", { name: "S9" })).not.toBeInTheDocument();
+
+  await user.click(screen.getByRole("radio", { name: "S10" }));
+
+  expect(await screen.findByRole("heading", { name: /^season 10$/i })).toBeInTheDocument();
+});
+
+test("Public link lookup is case-insensitive and preserves stored Display name casing in the URL", async () => {
+  const history = createMemoryHistory({ initialEntries: ["/p/finalsfan"] });
+  const router = createAppRouter({ history });
+  const publicSeasonClient = createPublicSeasonClient({
+    players: {
+      FinalsFan: {
+        displayName: "FinalsFan",
+        isPublic: true,
+        entries: [
+          entryFixture({ id: "public-entry", rs: 33000, recordedAt: "2026-07-16T10:00:00.000Z" }),
+        ],
+      },
+    },
+  });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      publicSeasonClient={publicSeasonClient}
+    />,
+  );
+
+  await screen.findByLabelText("Viewing");
+  await waitFor(() => {
+    expect(history.location.pathname).toBe("/p/FinalsFan");
+  });
+  expect(screen.getByLabelText("Viewing")).toHaveTextContent("FinalsFan");
+});
+
+test("signed-in visitor on a Public link gets the same read-only Public Season surface", async () => {
+  const history = createMemoryHistory({ initialEntries: ["/p/FinalsFan"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient } = createSignedInClients({ displayName: "myPlayer" });
+  const publicSeasonClient = createPublicSeasonClient({
+    players: {
+      FinalsFan: {
+        displayName: "FinalsFan",
+        isPublic: true,
+        entries: [
+          entryFixture({ id: "public-entry", rs: 33000, recordedAt: "2026-07-16T10:00:00.000Z" }),
+        ],
+      },
+    },
+  });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={authClient}
+      profileClient={profileClient}
+      publicSeasonClient={publicSeasonClient}
+    />,
+  );
+
+  expect(await screen.findByLabelText("Viewing")).toHaveTextContent("FinalsFan");
+  expect(screen.queryByRole("button", { name: "Log RS" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Data" })).toBeInTheDocument();
+});
+
+test("signed-in Player on their own Public link gets the public read-only surface", async () => {
+  const history = createMemoryHistory({ initialEntries: ["/p/myPlayer"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient } = createSignedInClients({ displayName: "myPlayer" });
+  const publicSeasonClient = createPublicSeasonClient({
+    players: {
+      myPlayer: {
+        displayName: "myPlayer",
+        isPublic: true,
+        entries: [
+          entryFixture({ id: "own-public", rs: 28000, recordedAt: "2026-07-16T10:00:00.000Z" }),
+        ],
+      },
+    },
+  });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={authClient}
+      profileClient={profileClient}
+      publicSeasonClient={publicSeasonClient}
+    />,
+  );
+
+  expect(await screen.findByLabelText("Viewing")).toHaveTextContent("myPlayer");
+  expect(screen.getByLabelText("Season hero")).toHaveTextContent("28,000");
+  expect(screen.queryByRole("button", { name: "Log RS" })).not.toBeInTheDocument();
+});
+
+test("Public Season routes set robots noindex", async () => {
+  const history = createMemoryHistory({ initialEntries: ["/p/unknown-player"] });
+  const router = createAppRouter({ history });
+  const publicSeasonClient = createPublicSeasonClient();
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      publicSeasonClient={publicSeasonClient}
+    />,
+  );
+
+  await screen.findByRole("heading", { name: "Public Season view unavailable" });
+
+  expect(document.querySelector('meta[name="robots"]')?.getAttribute("content")).toBe(
+    "noindex, nofollow",
+  );
 });

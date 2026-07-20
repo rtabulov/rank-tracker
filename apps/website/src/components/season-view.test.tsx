@@ -56,6 +56,7 @@ test("read-only empty Current Season omits Log RS and keeps empty hero and timel
     await screen.findByRole("heading", { name: /season 11 \(current\)/i }),
   ).toBeInTheDocument();
   expect(screen.getByLabelText("No RS logged")).toHaveTextContent("—");
+  expect(screen.getByText("No RS logged yet.")).toBeInTheDocument();
   expect(screen.queryByLabelText("RS sparkline")).not.toBeInTheDocument();
   expect(screen.queryByLabelText("Season summary")).not.toBeInTheDocument();
   expect(screen.getByText("No Entries yet.")).toBeInTheDocument();

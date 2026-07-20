@@ -16,6 +16,11 @@ import { CloudSyncProvider } from "@/components/cloud-sync-provider";
 import { DisplayNameGate } from "@/components/display-name-gate";
 import { HeaderActions } from "@/components/header-actions";
 import { HeaderEyebrow } from "@/components/header-eyebrow";
+import {
+  parsePublicSeasonSearch,
+  PublicSeasonRoutePage,
+} from "@/components/public-season-route-page";
+import { PublicSeasonProvider } from "@/components/public-season-provider";
 import { ProfileProvider } from "@/components/profile-provider";
 import { LocalStoreProvider, useLocalStore } from "@/components/local-store-provider";
 import { SeasonView } from "@/components/season-view";
@@ -27,6 +32,11 @@ import {
   createSupabaseCloudEntriesClient,
   type CloudEntriesClient,
 } from "@/lib/cloud-entries";
+import {
+  createMemoryPublicSeasonClient,
+  createSupabasePublicSeasonClient,
+  type PublicSeasonClient,
+} from "@/lib/public-season";
 import {
   createMemoryProfileClient,
   createSupabaseProfileClient,
@@ -61,6 +71,13 @@ function createDefaultCloudEntriesClient(): CloudEntriesClient {
   return createSupabaseCloudEntriesClient();
 }
 
+function createDefaultPublicSeasonClient(): PublicSeasonClient {
+  if (import.meta.env.MODE === "test") {
+    return createMemoryPublicSeasonClient();
+  }
+  return createSupabasePublicSeasonClient();
+}
+
 type SeasonSearch = {
   season?: number;
 };
@@ -79,7 +96,19 @@ const indexRoute = createRoute({
   component: SeasonViewPage,
 });
 
-const routeTree = rootRoute.addChildren([indexRoute]);
+const publicSeasonRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/p/$displayName",
+  validateSearch: (search: Record<string, unknown>): SeasonSearch =>
+    parsePublicSeasonSearch(search),
+  component: PublicSeasonViewPage,
+});
+
+function PublicSeasonViewPage() {
+  return <PublicSeasonRoutePage routeId={publicSeasonRoute.id} />;
+}
+
+const routeTree = rootRoute.addChildren([indexRoute, publicSeasonRoute]);
 
 export function createAppRouter(options?: { history?: RouterHistory }) {
   return createRouter({
@@ -195,6 +224,7 @@ export function App({
   authClient,
   profileClient,
   entriesClient,
+  publicSeasonClient,
 }: {
   router?: AnyRouter;
   storageAdapter?: StorageAdapter;
@@ -202,12 +232,16 @@ export function App({
   authClient?: AuthClient;
   profileClient?: ProfileClient;
   entriesClient?: CloudEntriesClient;
+  publicSeasonClient?: PublicSeasonClient;
 }) {
   const [queryClient] = useState(() => new QueryClient());
   const [resolvedAuthClient] = useState(() => authClient ?? createDefaultAuthClient());
   const [resolvedProfileClient] = useState(() => profileClient ?? createDefaultProfileClient());
   const [resolvedEntriesClient] = useState(
     () => entriesClient ?? createDefaultCloudEntriesClient(),
+  );
+  const [resolvedPublicSeasonClient] = useState(
+    () => publicSeasonClient ?? createDefaultPublicSeasonClient(),
   );
 
   return (
@@ -216,7 +250,9 @@ export function App({
         <ProfileProvider profileClient={resolvedProfileClient}>
           <LocalStoreProvider storageAdapter={storageAdapter} initialStore={initialStore}>
             <CloudSyncProvider entriesClient={resolvedEntriesClient}>
-              <RouterProvider router={router} />
+              <PublicSeasonProvider publicSeasonClient={resolvedPublicSeasonClient}>
+                <RouterProvider router={router} />
+              </PublicSeasonProvider>
             </CloudSyncProvider>
           </LocalStoreProvider>
         </ProfileProvider>

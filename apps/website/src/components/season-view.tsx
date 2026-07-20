@@ -69,7 +69,9 @@ export function SeasonView({
             >
               —
             </p>
-            <p className="text-sm text-muted-foreground">Log your first RS to get started.</p>
+            <p className="text-sm text-muted-foreground">
+              {readOnly ? "No RS logged yet." : "Log your first RS to get started."}
+            </p>
           </>
         ) : (
           <>
