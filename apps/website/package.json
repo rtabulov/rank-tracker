@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vp dev",
+    "prototype:public-season-view": "vp dev --open /prototype/public-season-view?variant=A&screen=settings",
     "build": "tsc && vp build",
     "preview": "vp preview",
     "test": "vp test"

@@ -7,6 +7,7 @@ import {
   createRoute,
   createRouter,
   useNavigate,
+  useRouterState,
   useSearch,
   type AnyRouter,
   type RouterHistory,
@@ -16,6 +17,10 @@ import { CloudSyncProvider } from "@/components/cloud-sync-provider";
 import { DisplayNameGate } from "@/components/display-name-gate";
 import { HeaderActions } from "@/components/header-actions";
 import { HeaderEyebrow } from "@/components/header-eyebrow";
+import {
+  PublicSeasonViewPrototypePage,
+  type PublicSeasonViewPrototypeSearch,
+} from "@/components/prototype/public-season-view/page";
 import { ProfileProvider } from "@/components/profile-provider";
 import { LocalStoreProvider, useLocalStore } from "@/components/local-store-provider";
 import { SeasonView } from "@/components/season-view";
@@ -79,7 +84,18 @@ const indexRoute = createRoute({
   component: SeasonViewPage,
 });
 
-const routeTree = rootRoute.addChildren([indexRoute]);
+/** PROTOTYPE — throwaway Public Season view / Public link controls. */
+const publicSeasonViewPrototypeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/prototype/public-season-view",
+  validateSearch: (search: Record<string, unknown>): PublicSeasonViewPrototypeSearch => ({
+    variant: typeof search.variant === "string" ? search.variant : undefined,
+    screen: typeof search.screen === "string" ? search.screen : undefined,
+  }),
+  component: PublicSeasonViewPrototypePage,
+});
+
+const routeTree = rootRoute.addChildren([indexRoute, publicSeasonViewPrototypeRoute]);
 
 export function createAppRouter(options?: { history?: RouterHistory }) {
   return createRouter({
@@ -98,58 +114,66 @@ declare module "@tanstack/react-router" {
 }
 
 function RootLayout() {
+  const isPrototypeRoute = useRouterState({
+    select: (state) => state.location.pathname.includes("/prototype/"),
+  });
+
   return (
     <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
       <ThemeHotkey />
-      <div className="relative flex min-h-svh flex-col bg-background text-foreground">
-        <div
-          className="pointer-events-none absolute inset-0 z-0 opacity-[0.12] hud-scanlines"
-          aria-hidden="true"
-        />
-        <div
-          className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_top,color-mix(in_oklab,var(--hud-cyan)_12%,transparent),transparent_55%)]"
-          aria-hidden="true"
-        />
-        <header className="relative z-10 mx-auto w-full max-w-lg px-4 pt-4">
-          <div className="hud-chamfer flex items-start justify-between gap-3 border border-primary/30 bg-card/80 p-3">
-            <div>
-              <HeaderEyebrow />
-              <h1 className="font-heading text-lg font-black uppercase tracking-[0.2em] text-primary hud-glow-primary">
-                Rank Tracker
-              </h1>
+      {isPrototypeRoute ? (
+        <Outlet />
+      ) : (
+        <div className="relative flex min-h-svh flex-col bg-background text-foreground">
+          <div
+            className="pointer-events-none absolute inset-0 z-0 opacity-[0.12] hud-scanlines"
+            aria-hidden="true"
+          />
+          <div
+            className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_top,color-mix(in_oklab,var(--hud-cyan)_12%,transparent),transparent_55%)]"
+            aria-hidden="true"
+          />
+          <header className="relative z-10 mx-auto w-full max-w-lg px-4 pt-4">
+            <div className="hud-chamfer flex items-start justify-between gap-3 border border-primary/30 bg-card/80 p-3">
+              <div>
+                <HeaderEyebrow />
+                <h1 className="font-heading text-lg font-black uppercase tracking-[0.2em] text-primary hud-glow-primary">
+                  Rank Tracker
+                </h1>
+              </div>
+              <HeaderActions />
             </div>
-            <HeaderActions />
+          </header>
+          <DisplayNameGate />
+          <div className="relative z-10 flex flex-1 flex-col">
+            <Outlet />
           </div>
-        </header>
-        <DisplayNameGate />
-        <div className="relative z-10 flex flex-1 flex-col">
-          <Outlet />
+          <footer className="relative z-0 mx-auto w-full max-w-lg px-4 pb-28 pt-2">
+            <nav
+              aria-label="Project links"
+              className="flex items-center justify-center gap-3 font-sans text-xs text-muted-foreground"
+            >
+              <a
+                href="https://github.com/rtabulov/rank-tracker"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-foreground"
+              >
+                Source
+              </a>
+              <span aria-hidden="true">·</span>
+              <a
+                href="https://github.com/rtabulov/rank-tracker/issues/new/choose"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-foreground"
+              >
+                Report a problem
+              </a>
+            </nav>
+          </footer>
         </div>
-        <footer className="relative z-0 mx-auto w-full max-w-lg px-4 pb-28 pt-2">
-          <nav
-            aria-label="Project links"
-            className="flex items-center justify-center gap-3 font-sans text-xs text-muted-foreground"
-          >
-            <a
-              href="https://github.com/rtabulov/rank-tracker"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-foreground"
-            >
-              Source
-            </a>
-            <span aria-hidden="true">·</span>
-            <a
-              href="https://github.com/rtabulov/rank-tracker/issues/new/choose"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-foreground"
-            >
-              Report a problem
-            </a>
-          </nav>
-        </footer>
-      </div>
+      )}
     </ThemeProvider>
   );
 }

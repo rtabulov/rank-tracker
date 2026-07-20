@@ -6,6 +6,7 @@
   "scripts": {
     "ready": "vp check && vp run -r test && vp run -r build",
     "dev": "vp run website#dev",
+    "prototype:public-season-view": "vp run website#prototype:public-season-view",
     "prepare": "vp config",
     "test": "vp test",
     "sandcastle": "vp exec sandcastle docker build-image && vp exec tsx .sandcastle/main.ts"
