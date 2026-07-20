@@ -24,20 +24,28 @@ import { cn } from "@/lib/utils";
 type SeasonViewProps = {
   seasonNumber: number;
   onSeasonSelect: (seasonNumber: number) => void;
+  entries?: Entry[];
+  readOnly?: boolean;
 };
 
-export function SeasonView({ seasonNumber, onSeasonSelect }: SeasonViewProps) {
+export function SeasonView({
+  seasonNumber,
+  onSeasonSelect,
+  entries: entriesProp,
+  readOnly = false,
+}: SeasonViewProps) {
   const { store, setStore } = useLocalStore();
   const [logRsOpen, setLogRsOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<Entry | null>(null);
   const [deletingEntry, setDeletingEntry] = useState<Entry | null>(null);
+  const entries = entriesProp ?? store.entries;
   const season = getSeasonByNumber(seasonNumber) ?? getCurrentSeason();
-  const entries = getEntriesForSeason(store.entries, season.number);
-  const isEmpty = entries.length === 0;
+  const seasonEntries = getEntriesForSeason(entries, season.number);
+  const isEmpty = seasonEntries.length === 0;
   const isCurrentSeason = season.number === getCurrentSeason().number;
-  const summary = computeSeasonSummary(entries, { isCurrentSeason });
-  const navigableSeasons = getNavigableSeasons(store.entries);
-  const timeline = [...entries].reverse();
+  const summary = computeSeasonSummary(seasonEntries, { isCurrentSeason });
+  const navigableSeasons = getNavigableSeasons(entries);
+  const timeline = [...seasonEntries].reverse();
 
   return (
     <main className="mx-auto flex w-full max-w-lg flex-1 flex-col px-4 pb-4 pt-5">
@@ -102,7 +110,7 @@ export function SeasonView({ seasonNumber, onSeasonSelect }: SeasonViewProps) {
             aria-label="RS sparkline"
             className="mb-5 border border-hud-cyan/25 bg-card/70 p-3 text-primary"
           >
-            <RsSparkline entries={entries} showDots showArea className="w-full" height={88} />
+            <RsSparkline entries={seasonEntries} showDots showArea className="w-full" height={88} />
           </section>
 
           <section aria-label="Season summary" className="mb-5 font-sans text-xs">
@@ -146,8 +154,9 @@ export function SeasonView({ seasonNumber, onSeasonSelect }: SeasonViewProps) {
         ) : (
           <ul className="flex flex-col gap-2">
             {timeline.map((entry) => {
-              const chronologicalIndex = entries.findIndex((item) => item.id === entry.id);
-              const previous = chronologicalIndex > 0 ? entries[chronologicalIndex - 1] : undefined;
+              const chronologicalIndex = seasonEntries.findIndex((item) => item.id === entry.id);
+              const previous =
+                chronologicalIndex > 0 ? seasonEntries[chronologicalIndex - 1] : undefined;
               const delta = previous !== undefined ? entry.rs - previous.rs : null;
 
               return (
@@ -170,28 +179,30 @@ export function SeasonView({ seasonNumber, onSeasonSelect }: SeasonViewProps) {
                       {formatLocalWhen(entry.recordedAt)}
                     </p>
                   </div>
-                  <div className="flex gap-1">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon-lg"
-                      className="rounded-none border-hud-cyan/40 text-hud-cyan"
-                      aria-label={`Edit ${entry.id}`}
-                      onClick={() => setEditingEntry(entry)}
-                    >
-                      <Pencil className="size-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon-lg"
-                      className="rounded-none border-destructive/50 text-destructive"
-                      aria-label={`Delete ${entry.id}`}
-                      onClick={() => setDeletingEntry(entry)}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </div>
+                  {!readOnly && (
+                    <div className="flex gap-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-lg"
+                        className="rounded-none border-hud-cyan/40 text-hud-cyan"
+                        aria-label={`Edit ${entry.id}`}
+                        onClick={() => setEditingEntry(entry)}
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-lg"
+                        className="rounded-none border-destructive/50 text-destructive"
+                        aria-label={`Delete ${entry.id}`}
+                        onClick={() => setDeletingEntry(entry)}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                  )}
                 </li>
               );
             })}
@@ -207,63 +218,67 @@ export function SeasonView({ seasonNumber, onSeasonSelect }: SeasonViewProps) {
         />
       </div>
 
-      <div className="fixed bottom-4 left-1/2 z-40 w-full max-w-lg -translate-x-1/2 px-4">
-        <Button
-          type="button"
-          size="lg"
-          className="h-12 w-full rounded-none border border-primary font-heading text-sm font-bold uppercase tracking-[0.25em] hud-glow-box active:scale-[0.98]"
-          onClick={() => setLogRsOpen(true)}
-        >
-          Log RS
-        </Button>
-      </div>
+      {!readOnly && (
+        <>
+          <div className="fixed bottom-4 left-1/2 z-40 w-full max-w-lg -translate-x-1/2 px-4">
+            <Button
+              type="button"
+              size="lg"
+              className="h-12 w-full rounded-none border border-primary font-heading text-sm font-bold uppercase tracking-[0.25em] hud-glow-box active:scale-[0.98]"
+              onClick={() => setLogRsOpen(true)}
+            >
+              Log RS
+            </Button>
+          </div>
 
-      <LogRsOverlay
-        open={logRsOpen}
-        seasonNumber={season.number}
-        onClose={() => setLogRsOpen(false)}
-        onSaved={(entry) => {
-          setStore({ ...store, entries: addEntry(store.entries, entry) });
-          const targetSeason = getSeasonForTimestamp(entry.recordedAt);
-          if (targetSeason !== null && targetSeason.number !== season.number) {
-            onSeasonSelect(targetSeason.number);
-          }
-        }}
-      />
+          <LogRsOverlay
+            open={logRsOpen}
+            seasonNumber={season.number}
+            onClose={() => setLogRsOpen(false)}
+            onSaved={(entry) => {
+              setStore({ ...store, entries: addEntry(store.entries, entry) });
+              const targetSeason = getSeasonForTimestamp(entry.recordedAt);
+              if (targetSeason !== null && targetSeason.number !== season.number) {
+                onSeasonSelect(targetSeason.number);
+              }
+            }}
+          />
 
-      <EditEntryOverlay
-        open={editingEntry !== null && deletingEntry === null}
-        entry={editingEntry ?? PLACEHOLDER_ENTRY}
-        seasonNumber={season.number}
-        onClose={() => setEditingEntry(null)}
-        onSaved={(entry) => {
-          setStore({ ...store, entries: updateEntry(store.entries, entry.id, entry) });
-          const targetSeason = getSeasonForTimestamp(entry.recordedAt);
-          if (targetSeason !== null && targetSeason.number !== season.number) {
-            onSeasonSelect(targetSeason.number);
-          }
-        }}
-        onDeleteRequest={() => {
-          if (editingEntry === null) {
-            return;
-          }
-          setDeletingEntry(editingEntry);
-          setEditingEntry(null);
-        }}
-      />
+          <EditEntryOverlay
+            open={editingEntry !== null && deletingEntry === null}
+            entry={editingEntry ?? PLACEHOLDER_ENTRY}
+            seasonNumber={season.number}
+            onClose={() => setEditingEntry(null)}
+            onSaved={(entry) => {
+              setStore({ ...store, entries: updateEntry(store.entries, entry.id, entry) });
+              const targetSeason = getSeasonForTimestamp(entry.recordedAt);
+              if (targetSeason !== null && targetSeason.number !== season.number) {
+                onSeasonSelect(targetSeason.number);
+              }
+            }}
+            onDeleteRequest={() => {
+              if (editingEntry === null) {
+                return;
+              }
+              setDeletingEntry(editingEntry);
+              setEditingEntry(null);
+            }}
+          />
 
-      <DeleteEntryOverlay
-        open={deletingEntry !== null}
-        entry={deletingEntry ?? PLACEHOLDER_ENTRY}
-        onClose={() => setDeletingEntry(null)}
-        onConfirm={() => {
-          if (deletingEntry === null) {
-            return;
-          }
-          setStore({ ...store, entries: deleteEntry(store.entries, deletingEntry.id) });
-          setDeletingEntry(null);
-        }}
-      />
+          <DeleteEntryOverlay
+            open={deletingEntry !== null}
+            entry={deletingEntry ?? PLACEHOLDER_ENTRY}
+            onClose={() => setDeletingEntry(null)}
+            onConfirm={() => {
+              if (deletingEntry === null) {
+                return;
+              }
+              setStore({ ...store, entries: deleteEntry(store.entries, deletingEntry.id) });
+              setDeletingEntry(null);
+            }}
+          />
+        </>
+      )}
     </main>
   );
 }
