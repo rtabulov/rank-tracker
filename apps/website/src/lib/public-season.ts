@@ -20,13 +20,16 @@ type MemoryPublicPlayer = {
 
 export function createMemoryPublicSeasonClient(options?: {
   players?: Record<string, MemoryPublicPlayer>;
+  livePlayers?: Map<string, MemoryPublicPlayer>;
 }): PublicSeasonClient {
-  const players = new Map<string, MemoryPublicPlayer>(
-    Object.entries(options?.players ?? {}).map(([displayName, player]) => [
-      displayName.toLowerCase(),
-      player,
-    ]),
-  );
+  const players =
+    options?.livePlayers ??
+    new Map<string, MemoryPublicPlayer>(
+      Object.entries(options?.players ?? {}).map(([displayName, player]) => [
+        displayName.toLowerCase(),
+        player,
+      ]),
+    );
 
   return {
     getPublicSeason: async (displayName) => {

@@ -5,6 +5,7 @@ import {
   type PlayerProfile,
   type ProfileClient,
   type SetDisplayNameResult,
+  type SetIsPublicResult,
 } from "@/lib/profile";
 
 type ProfileContextValue = {
@@ -13,6 +14,7 @@ type ProfileContextValue = {
   profileClient: ProfileClient;
   isCloudSyncAllowed: boolean;
   saveDisplayName: (displayName: string) => Promise<SetDisplayNameResult>;
+  setPublicSharing: (isPublic: boolean) => Promise<SetIsPublicResult>;
 };
 
 const ProfileContext = createContext<ProfileContextValue | null>(null);
@@ -62,6 +64,18 @@ export function ProfileProvider({
     return result;
   };
 
+  const setPublicSharing = async (isPublic: boolean): Promise<SetIsPublicResult> => {
+    if (session === null) {
+      return { ok: false, error: "Sign in to change Public sharing." };
+    }
+
+    const result = await profileClient.setIsPublic(session.userId, isPublic);
+    if (result.ok) {
+      setProfile(result.profile);
+    }
+    return result;
+  };
+
   return (
     <ProfileContext.Provider
       value={{
@@ -70,6 +84,7 @@ export function ProfileProvider({
         profileClient,
         isCloudSyncAllowed: computeCloudSyncAllowed(session, profile),
         saveDisplayName,
+        setPublicSharing,
       }}
     >
       {children}

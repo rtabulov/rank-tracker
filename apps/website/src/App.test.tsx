@@ -5,7 +5,7 @@ import { expect, test, vi } from "vite-plus/test";
 import { App, createAppRouter } from "./App.tsx";
 import { createMemoryAuthClient } from "./lib/auth";
 import { createMemoryCloudEntriesClient } from "./lib/cloud-entries";
-import { createMemoryProfileClient } from "./lib/profile";
+import { createMemoryProfileClient, type ProfileClient } from "./lib/profile";
 import { createMemoryPublicSeasonClient, type PublicSeasonClient } from "./lib/public-season";
 import { createMemoryStorageAdapter, LOCAL_STORE_KEY } from "./lib/local-store";
 import { APP_SCHEMA_VERSION } from "./lib/schema";
@@ -1961,7 +1961,8 @@ test("saving a valid display name completes profile and hides display name step"
 
   await user.click(screen.getByRole("button", { name: "Data" }));
   const data = await screen.findByRole("dialog", { name: "Data" });
-  expect(within(data).getByText("Display name: NewPlayer")).toBeInTheDocument();
+  expect(within(data).getByText(/Display name:/)).toBeInTheDocument();
+  expect(within(data).getByText("NewPlayer")).toBeInTheDocument();
   expect(within(data).getByText("Cloud sync ready.")).toBeInTheDocument();
   expect(within(data).queryByLabelText(/^display name$/i)).not.toBeInTheDocument();
 });
@@ -2899,4 +2900,241 @@ test("Public Season routes set robots noindex", async () => {
   expect(document.querySelector('meta[name="robots"]')?.getAttribute("content")).toBe(
     "noindex, nofollow",
   );
+});
+
+function createSignedInClientsWithPublicSeason(input: {
+  userId?: string;
+  displayName: string;
+  isPublic?: boolean;
+  entries?: ReturnType<typeof entryFixture>[];
+}) {
+  const userId = input.userId ?? "player-1";
+  const displayName = input.displayName;
+  const livePlayers = new Map<
+    string,
+    {
+      displayName: string;
+      isPublic: boolean;
+      entries: ReturnType<typeof entryFixture>[];
+    }
+  >();
+
+  livePlayers.set(displayName.toLowerCase(), {
+    displayName,
+    isPublic: input.isPublic ?? false,
+    entries: input.entries ?? [],
+  });
+
+  const baseProfileClient = createMemoryProfileClient({
+    profiles: {
+      [userId]: { displayName, isPublic: input.isPublic ?? false },
+    },
+  });
+
+  const profileClient: ProfileClient = {
+    ...baseProfileClient,
+    setIsPublic: async (uid, nextIsPublic) => {
+      const result = await baseProfileClient.setIsPublic(uid, nextIsPublic);
+      if (result.ok && result.profile.displayName !== null) {
+        const key = result.profile.displayName.toLowerCase();
+        const existing = livePlayers.get(key);
+        livePlayers.set(key, {
+          displayName: result.profile.displayName,
+          isPublic: result.profile.isPublic,
+          entries: existing?.entries ?? [],
+        });
+      }
+      return result;
+    },
+  };
+
+  const authClient = createMemoryAuthClient({ userId, email: "player@example.com" });
+  const publicSeasonClient = createMemoryPublicSeasonClient({ livePlayers });
+  const entriesClient = createMemoryCloudEntriesClient();
+
+  return { authClient, profileClient, publicSeasonClient, entriesClient, userId };
+}
+
+test("Data settings show Public off by default with disabled copy when Display name is set", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient, publicSeasonClient } = createSignedInClientsWithPublicSeason({
+    displayName: "FinalsFan",
+  });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={authClient}
+      profileClient={profileClient}
+      publicSeasonClient={publicSeasonClient}
+    />,
+  );
+
+  await screen.findByRole("heading", { name: "Rank Tracker" });
+  await user.click(screen.getByRole("button", { name: "Data" }));
+  const data = await screen.findByRole("dialog", { name: "Data" });
+
+  expect(within(data).getByRole("button", { name: "Public Season view" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  expect(within(data).getByRole("button", { name: "Public Season view" })).toHaveTextContent(
+    "Private",
+  );
+  expect(within(data).getByRole("button", { name: "Copy Public link" })).toBeDisabled();
+  expect(within(data).queryByText(/Public link:/)).not.toBeInTheDocument();
+});
+
+test("turning Public on in Data settings shows the Public link path and enables copy", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient, publicSeasonClient } = createSignedInClientsWithPublicSeason({
+    displayName: "FinalsFan",
+  });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={authClient}
+      profileClient={profileClient}
+      publicSeasonClient={publicSeasonClient}
+    />,
+  );
+
+  await screen.findByRole("heading", { name: "Rank Tracker" });
+  await user.click(screen.getByRole("button", { name: "Data" }));
+  const data = await screen.findByRole("dialog", { name: "Data" });
+  await user.click(within(data).getByRole("button", { name: "Public Season view" }));
+
+  expect(within(data).getByRole("button", { name: "Public Season view" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  expect(within(data).getByText("Public link: /p/FinalsFan")).toBeInTheDocument();
+  expect(within(data).getByRole("button", { name: "Copy Public link" })).toBeEnabled();
+});
+
+test("copy Public link writes the full Public Season URL", async () => {
+  const user = userEvent.setup();
+  const writeText = vi.fn(async () => undefined);
+  vi.spyOn(navigator.clipboard, "writeText").mockImplementation(writeText);
+
+  const history = createMemoryHistory({ initialEntries: ["/"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient, publicSeasonClient } = createSignedInClientsWithPublicSeason({
+    displayName: "FinalsFan",
+    isPublic: true,
+  });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={authClient}
+      profileClient={profileClient}
+      publicSeasonClient={publicSeasonClient}
+    />,
+  );
+
+  await screen.findByRole("heading", { name: "Rank Tracker" });
+  await user.click(screen.getByRole("button", { name: "Data" }));
+  const data = await screen.findByRole("dialog", { name: "Data" });
+  await user.click(within(data).getByRole("button", { name: "Copy Public link" }));
+
+  expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/p/FinalsFan`);
+  expect(within(data).getByText(/copied/)).toBeInTheDocument();
+
+  writeText.mockRestore();
+});
+
+test("turning Public off makes the Public link unavailable for visitors", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient, publicSeasonClient } = createSignedInClientsWithPublicSeason({
+    displayName: "FinalsFan",
+    isPublic: true,
+    entries: [
+      entryFixture({ id: "shared-entry", rs: 36000, recordedAt: "2026-07-16T10:00:00.000Z" }),
+    ],
+  });
+
+  const { unmount } = render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={authClient}
+      profileClient={profileClient}
+      publicSeasonClient={publicSeasonClient}
+    />,
+  );
+
+  await screen.findByRole("heading", { name: "Rank Tracker" });
+  await user.click(screen.getByRole("button", { name: "Data" }));
+  const data = await screen.findByRole("dialog", { name: "Data" });
+  await user.click(within(data).getByRole("button", { name: "Public Season view" }));
+
+  await waitFor(() => {
+    expect(within(data).getByRole("button", { name: "Public Season view" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+
+  unmount();
+
+  const publicHistory = createMemoryHistory({ initialEntries: ["/p/FinalsFan"] });
+  const publicRouter = createAppRouter({ history: publicHistory });
+
+  render(
+    <App
+      router={publicRouter}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={authClient}
+      profileClient={profileClient}
+      publicSeasonClient={publicSeasonClient}
+    />,
+  );
+
+  expect(
+    await screen.findByRole("heading", { name: "Public Season view unavailable" }),
+  ).toBeInTheDocument();
+  expect(screen.getByText("This Public link isn’t available.")).toBeInTheDocument();
+});
+
+test("Public link opens populated Public Season view while sharing is on", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient, publicSeasonClient } = createSignedInClientsWithPublicSeason({
+    displayName: "FinalsFan",
+    entries: [
+      entryFixture({ id: "shared-entry", rs: 36000, recordedAt: "2026-07-16T10:00:00.000Z" }),
+    ],
+  });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={authClient}
+      profileClient={profileClient}
+      publicSeasonClient={publicSeasonClient}
+    />,
+  );
+
+  await screen.findByRole("heading", { name: "Rank Tracker" });
+  await user.click(screen.getByRole("button", { name: "Data" }));
+  const data = await screen.findByRole("dialog", { name: "Data" });
+  await user.click(within(data).getByRole("button", { name: "Public Season view" }));
+
+  await router.navigate({ to: "/p/$displayName", params: { displayName: "FinalsFan" } });
+
+  expect(await screen.findByLabelText("Viewing")).toHaveTextContent("FinalsFan");
+  expect(screen.getByLabelText("Season hero")).toHaveTextContent("36,000");
 });

@@ -15,12 +15,13 @@ import { Button } from "@/components/ui/button";
 import type { OAuthProvider } from "@/lib/auth";
 import { downloadExport } from "@/lib/export";
 import { validateImportDocument } from "@/lib/import";
+import { publicSeasonLinkUrl } from "@/lib/public-link";
 import type { LocalStore } from "@/lib/types";
 
 export function HeaderActions() {
   const { store, setStore } = useLocalStore();
   const { session, status: authStatus, authClient } = useAuth();
-  const { profile, status: profileStatus, isCloudSyncAllowed } = useProfile();
+  const { profile, status: profileStatus, isCloudSyncAllowed, setPublicSharing } = useProfile();
   const { clearLocalData, deleteCloudData, resetEverything } = useCloudSync();
   const [dataOpen, setDataOpen] = useState(false);
   const [importConfirmOpen, setImportConfirmOpen] = useState(false);
@@ -35,6 +36,8 @@ export function HeaderActions() {
   const [magicLinkEmail, setMagicLinkEmail] = useState("");
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [magicLinkSending, setMagicLinkSending] = useState(false);
+  const [publicSharingError, setPublicSharingError] = useState<string | null>(null);
+  const [publicLinkCopied, setPublicLinkCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const closeData = () => {
@@ -45,6 +48,8 @@ export function HeaderActions() {
     setDataActionError(null);
     setMagicLinkSent(false);
     setMagicLinkSending(false);
+    setPublicSharingError(null);
+    setPublicLinkCopied(false);
   };
 
   const handleExport = () => {
@@ -193,6 +198,32 @@ export function HeaderActions() {
     setDataOpen(true);
   };
 
+  const handlePublicSharingChange = (isPublic: boolean) => {
+    setPublicSharingError(null);
+    setPublicLinkCopied(false);
+    void setPublicSharing(isPublic).then((result) => {
+      if (!result.ok) {
+        setPublicSharingError(result.error);
+      }
+    });
+  };
+
+  const handleCopyPublicLink = () => {
+    if (profile?.displayName === null || profile?.displayName === undefined) {
+      return;
+    }
+
+    setPublicSharingError(null);
+    void navigator.clipboard.writeText(publicSeasonLinkUrl(profile.displayName)).then(
+      () => {
+        setPublicLinkCopied(true);
+      },
+      () => {
+        setPublicSharingError("Could not copy Public link.");
+      },
+    );
+  };
+
   return (
     <>
       <div className="flex items-center gap-2">
@@ -237,6 +268,10 @@ export function HeaderActions() {
         onDeleteCloudClick={handleDeleteCloudClick}
         onResetEverythingClick={handleResetEverythingClick}
         dataActionError={dataActionError}
+        onPublicSharingChange={handlePublicSharingChange}
+        publicSharingError={publicSharingError}
+        publicLinkCopied={publicLinkCopied}
+        onCopyPublicLink={handleCopyPublicLink}
       />
 
       <ImportConfirmOverlay

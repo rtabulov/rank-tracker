@@ -11,9 +11,12 @@ export type SetDisplayNameResult =
   | { ok: true; profile: PlayerProfile }
   | { ok: false; error: string };
 
+export type SetIsPublicResult = { ok: true; profile: PlayerProfile } | { ok: false; error: string };
+
 export type ProfileClient = {
   getProfile: (userId: string) => Promise<PlayerProfile | null>;
   setDisplayName: (userId: string, displayName: string) => Promise<SetDisplayNameResult>;
+  setIsPublic: (userId: string, isPublic: boolean) => Promise<SetIsPublicResult>;
 };
 
 export function isProfileComplete(profile: PlayerProfile | null): boolean {
@@ -78,6 +81,16 @@ export function createMemoryProfileClient(options?: {
       const profile: PlayerProfile = { displayName: normalized, isPublic: false };
       profiles.set(userId, profile);
       takenNames.add(lower);
+      return { ok: true, profile };
+    },
+    setIsPublic: async (userId, isPublic) => {
+      const existing = profiles.get(userId);
+      if (existing === null || existing === undefined || existing.displayName === null) {
+        return { ok: false, error: "Set a display name before changing Public sharing." };
+      }
+
+      const profile: PlayerProfile = { ...existing, isPublic };
+      profiles.set(userId, profile);
       return { ok: true, profile };
     },
   };
@@ -146,6 +159,30 @@ export function createSupabaseProfileClient(client: SupabaseClient = supabase): 
           },
           { onConflict: "user_id" },
         )
+        .select("display_name,is_public")
+        .single();
+
+      if (error !== null) {
+        return { ok: false, error: mapSupabaseError(error.message) };
+      }
+
+      return { ok: true, profile: mapProfileRow(data) };
+    },
+    setIsPublic: async (userId, isPublic) => {
+      const existing = await client
+        .from("profiles")
+        .select("display_name")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (existing.data?.display_name === null || existing.data?.display_name === undefined) {
+        return { ok: false, error: "Set a display name before changing Public sharing." };
+      }
+
+      const { data, error } = await client
+        .from("profiles")
+        .update({ is_public: isPublic })
+        .eq("user_id", userId)
         .select("display_name,is_public")
         .single();
 

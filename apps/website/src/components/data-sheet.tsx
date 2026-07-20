@@ -1,4 +1,4 @@
-import { Mail } from "lucide-react";
+import { Copy, Mail } from "lucide-react";
 import type { ChangeEvent, RefObject } from "react";
 import { DiscordIcon, GoogleIcon } from "@/components/auth-icons";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Toggle } from "@/components/ui/toggle";
 import { ViewportOverlay } from "@/components/viewport-overlay";
 import type { AuthSession } from "@/lib/auth";
 import { isProfileComplete, type PlayerProfile } from "@/lib/profile";
+import { publicSeasonLinkPath } from "@/lib/public-link";
 
 type DataSheetProps = {
   open: boolean;
@@ -37,6 +39,10 @@ type DataSheetProps = {
   onDeleteCloudClick: () => void;
   onResetEverythingClick: () => void;
   dataActionError: string | null;
+  onPublicSharingChange: (isPublic: boolean) => void;
+  publicSharingError: string | null;
+  publicLinkCopied: boolean;
+  onCopyPublicLink: () => void;
 };
 
 export function DataSheet({
@@ -66,6 +72,10 @@ export function DataSheet({
   onDeleteCloudClick,
   onResetEverythingClick,
   dataActionError,
+  onPublicSharingChange,
+  publicSharingError,
+  publicLinkCopied,
+  onCopyPublicLink,
 }: DataSheetProps) {
   const signedIn = session !== null;
   const profileReady = profileStatus === "ready";
@@ -87,11 +97,48 @@ export function DataSheet({
                 <p className="text-sm text-muted-foreground" role="status">
                   {session.email !== null ? `Signed in as ${session.email}` : "Signed in"}
                 </p>
-                {profileReady && isProfileComplete(profile) && profile !== null && (
-                  <p className="text-sm text-muted-foreground" role="status">
-                    Display name: {profile.displayName}
-                  </p>
-                )}
+                {profileReady &&
+                  isProfileComplete(profile) &&
+                  profile !== null &&
+                  profile.displayName !== null && (
+                    <div className="flex flex-col gap-1">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border border-border bg-background/60 px-3 py-2">
+                        <p className="text-sm">
+                          <span className="text-muted-foreground">Display name: </span>
+                          <span className="font-medium text-foreground">{profile.displayName}</span>
+                        </p>
+                        <div className="flex items-center gap-1">
+                          <Toggle
+                            pressed={profile.isPublic}
+                            onPressedChange={onPublicSharingChange}
+                            variant="outline"
+                            size="sm"
+                            className="rounded-none"
+                            aria-label="Public Season view"
+                          >
+                            {profile.isPublic ? "Public" : "Private"}
+                          </Toggle>
+                          <Button
+                            type="button"
+                            size="icon-sm"
+                            variant="outline"
+                            className="rounded-none"
+                            disabled={!profile.isPublic}
+                            aria-label="Copy Public link"
+                            onClick={onCopyPublicLink}
+                          >
+                            <Copy className="size-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                      {profile.isPublic && (
+                        <p className="font-sans text-xs text-muted-foreground">
+                          Public link: {publicSeasonLinkPath(profile.displayName)}
+                          {publicLinkCopied ? " · copied" : ""}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 {profileReady && !isCloudSyncAllowed && (
                   <p className="text-sm text-muted-foreground" role="status">
                     Cloud sync blocked until you choose a display name.
@@ -154,6 +201,11 @@ export function DataSheet({
             {authError !== null && (
               <Alert variant="destructive" className="rounded-none">
                 <AlertDescription>{authError}</AlertDescription>
+              </Alert>
+            )}
+            {publicSharingError !== null && (
+              <Alert variant="destructive" className="rounded-none">
+                <AlertDescription>{publicSharingError}</AlertDescription>
               </Alert>
             )}
           </section>
