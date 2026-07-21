@@ -24,6 +24,7 @@ catalog:
   lucide-react: ^1.24.0
   nanoid: ^3.3.16
   radix-ui: ^1.6.2
+  serve: ^14.2.6
   shadcn: ^4.13.0
   supabase: ^2.109.1
   tailwind-merge: ^3.6.0

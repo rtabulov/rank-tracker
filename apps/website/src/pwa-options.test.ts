@@ -41,7 +41,7 @@ test("PWA precache excludes the SPA shell while keeping default hashed asset pat
 
 test("PWA navigation uses NetworkFirst with single-entry offline fallback and no API runtime rules", () => {
   expect(websitePwaOptions.strategies).toBe("generateSW");
-  expect(websitePwaOptions.workbox?.navigateFallback).toBe("/_shell.html");
+  expect(websitePwaOptions.workbox?.navigateFallback).toBe("/index.html");
 
   const runtimeCaching = websitePwaOptions.workbox?.runtimeCaching ?? [];
   expect(runtimeCaching).toHaveLength(1);

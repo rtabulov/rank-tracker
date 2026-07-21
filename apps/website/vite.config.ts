@@ -14,6 +14,12 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: "/",
+    build: {
+      emptyOutDir: true,
+    },
+    preview: {
+      port: 4173,
+    },
     plugins: lazyPlugins(async () => {
       const { tanstackStart } = await import("@tanstack/react-start/plugin/vite");
       const { default: react, reactCompilerPreset } = await import("@vitejs/plugin-react");
@@ -24,6 +30,10 @@ export default defineConfig(({ mode }) => {
         tanstackStart({
           spa: {
             enabled: true,
+            prerender: {
+              // Static hosts and `vp preview` serve the prerendered shell as index.html.
+              outputPath: "/index",
+            },
           },
           client: {
             entry: "./client.tsx",

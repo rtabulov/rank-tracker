@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vp dev",
     "build": "tsc && vp build",
-    "preview": "vp preview",
+    "preview": "serve dist/client -s -l 4173",
     "test": "vp test"
   },
   "dependencies": {
@@ -44,6 +44,7 @@
     "@vitejs/plugin-react": "^6.0.3",
     "babel-plugin-react-compiler": "^1.0.0",
     "jsdom": "^29.1.1",
+    "serve": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vite-plugin-pwa": "catalog:",

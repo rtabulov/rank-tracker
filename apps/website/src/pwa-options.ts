@@ -51,6 +51,6 @@ export const websitePwaOptions = {
         },
       },
     ],
-    navigateFallback: "/_shell.html",
+    navigateFallback: "/index.html",
   },
 } satisfies Partial<VitePWAOptions>;
