@@ -22,11 +22,11 @@ import { useLocalStore } from "@/components/local-store-provider";
 import { SeasonView } from "@/components/season-view";
 import { ThemeHotkey } from "@/components/theme-hotkey";
 import { ThemeProvider } from "@/components/theme-provider";
-import { PAGES_BASEPATH } from "@/lib/paths";
+import { SITE_BASEPATH } from "@/lib/paths";
 import { resolveSelectedSeason } from "@/lib/resolve-selected-season";
 import { parseSeasonSearchParam } from "@/lib/season-search";
 import { getCurrentSeason, isSeasonNavigable } from "@/lib/seasons";
-export { PAGES_BASEPATH };
+export { SITE_BASEPATH };
 
 type SeasonSearch = {
   season?: number;
@@ -63,7 +63,7 @@ const routeTree = rootRoute.addChildren([indexRoute, publicSeasonRoute]);
 export function createAppRouter(options?: { history?: RouterHistory }) {
   return createRouter({
     routeTree,
-    basepath: PAGES_BASEPATH,
+    basepath: SITE_BASEPATH,
     history: options?.history,
   });
 }

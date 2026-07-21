@@ -60,4 +60,4 @@ Product terminology and behaviour are defined in [`CONTEXT.md`](./CONTEXT.md). D
 
 ## Deployment
 
-Pushes to `main` deploy the website to GitHub Pages via [`.github/workflows/deploy-pages.yml`](./.github/workflows/deploy-pages.yml).
+Production hosting is not wired from this repo yet. See [#96](https://github.com/rtabulov/rank-tracker/issues/96) for the planned move to a new hosting solution.

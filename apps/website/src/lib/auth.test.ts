@@ -1,9 +1,9 @@
 import { expect, test } from "vite-plus/test";
 import { authRedirectTo } from "./auth";
-import { PAGES_BASEPATH } from "./paths";
+import { SITE_BASEPATH } from "./paths";
 
 test("auth redirect targets site root on custom domain", () => {
-  expect(authRedirectTo("https://rank.rtabulov.dev", PAGES_BASEPATH)).toBe(
+  expect(authRedirectTo("https://rank.rtabulov.dev", SITE_BASEPATH)).toBe(
     "https://rank.rtabulov.dev/",
   );
 });

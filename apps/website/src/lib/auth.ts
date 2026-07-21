@@ -1,5 +1,5 @@
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
-import { PAGES_BASEPATH } from "@/lib/paths";
+import { SITE_BASEPATH } from "@/lib/paths";
 import { supabase } from "@/supabase";
 
 export type AuthSession = {
@@ -17,7 +17,7 @@ export type AuthClient = {
   signOut: () => Promise<{ error: string | null }>;
 };
 
-export function authRedirectTo(origin: string, basepath: string = PAGES_BASEPATH): string {
+export function authRedirectTo(origin: string, basepath: string = SITE_BASEPATH): string {
   const normalizedBase = basepath.endsWith("/") ? basepath : `${basepath}/`;
   return `${origin}${normalizedBase}`;
 }
@@ -71,7 +71,7 @@ export function createSupabaseAuthClient(
   options?: { getRedirectTo?: () => string },
 ): AuthClient {
   const getRedirectTo =
-    options?.getRedirectTo ?? (() => authRedirectTo(window.location.origin, PAGES_BASEPATH));
+    options?.getRedirectTo ?? (() => authRedirectTo(window.location.origin, SITE_BASEPATH));
 
   return {
     getSession: async () => {
