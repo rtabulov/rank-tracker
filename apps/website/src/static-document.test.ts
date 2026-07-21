@@ -41,6 +41,24 @@ function getMetaByProperty(html: string, property: string): string | undefined {
   return altMatch?.[1];
 }
 
+test("static document exposes theme-color metas aligned with the shell palette", () => {
+  const html = readIndexHtml();
+
+  expect(html).toMatch(
+    /<meta\s+[^>]*name="theme-color"[^>]*content="#f4f4f8"[^>]*media="\(prefers-color-scheme:\s*light\)"/i,
+  );
+  expect(html).toMatch(
+    /<meta\s+[^>]*name="theme-color"[^>]*content="#0a0a0f"[^>]*media="\(prefers-color-scheme:\s*dark\)"/i,
+  );
+});
+
+test("static document boot script syncs theme-color to the resolved shell background", () => {
+  const html = readIndexHtml();
+
+  expect(html).toMatch(/data-shell-chrome/);
+  expect(html).toMatch(/resolved === "dark" \? "#0a0a0f" : "#f4f4f8"/);
+});
+
 test("static document exposes the Rank Tracker title for crawlers", () => {
   expect(getTitle(readIndexHtml())).toBe(SITE_TITLE);
 });

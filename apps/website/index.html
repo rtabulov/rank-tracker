@@ -20,6 +20,8 @@
       content="Personal Rank Score history for The Finals ranked play."
     />
     <meta name="twitter:image" content="https://rank.rtabulov.dev/og.png" />
+    <meta name="theme-color" content="#f4f4f8" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0a0a0f" media="(prefers-color-scheme: dark)" />
     <title>Rank Tracker</title>
     <script>
       try {
@@ -34,6 +36,14 @@
               : "light"
             : theme;
         document.documentElement.classList.add(resolved);
+        let themeColorMeta = document.querySelector('meta[name="theme-color"][data-shell-chrome]');
+        if (!themeColorMeta) {
+          themeColorMeta = document.createElement("meta");
+          themeColorMeta.setAttribute("name", "theme-color");
+          themeColorMeta.setAttribute("data-shell-chrome", "");
+          document.head.appendChild(themeColorMeta);
+        }
+        themeColorMeta.setAttribute("content", resolved === "dark" ? "#0a0a0f" : "#f4f4f8");
       } catch (_) {}
     </script>
   </head>

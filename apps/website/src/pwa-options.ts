@@ -1,4 +1,5 @@
 import type { VitePWAOptions } from "vite-plugin-pwa";
+import { SHELL_BACKGROUND_DARK, SHELL_BACKGROUND_LIGHT } from "./lib/shell-chrome-colors.ts";
 
 export const websitePwaOptions = {
   strategies: "generateSW",
@@ -11,8 +12,8 @@ export const websitePwaOptions = {
     start_url: "/",
     scope: "/",
     display: "standalone",
-    background_color: "#ffffff",
-    theme_color: "#ffffff",
+    background_color: SHELL_BACKGROUND_DARK,
+    theme_color: SHELL_BACKGROUND_LIGHT,
     icons: [
       {
         src: "pwa-192x192.png",

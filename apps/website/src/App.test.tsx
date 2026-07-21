@@ -187,6 +187,33 @@ test("toggling theme updates effective light/dark on the document", async () => 
   expect(document.documentElement).not.toHaveClass("dark");
 });
 
+function getShellThemeColorMeta(): string | null {
+  return (
+    document
+      .querySelector('meta[name="theme-color"][data-shell-chrome]')
+      ?.getAttribute("content") ?? null
+  );
+}
+
+test("toggling theme updates browser theme-color meta to the shell background", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/"] });
+  const router = createAppRouter({ history });
+
+  render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
+
+  expect(await screen.findByRole("heading", { name: "Rank Tracker" })).toBeInTheDocument();
+  expect(getShellThemeColorMeta()).toBe("#f4f4f8");
+
+  await user.click(screen.getByRole("button", { name: /toggle theme/i }));
+  await user.click(screen.getByRole("menuitem", { name: /^dark$/i }));
+  expect(getShellThemeColorMeta()).toBe("#0a0a0f");
+
+  await user.click(screen.getByRole("button", { name: /toggle theme/i }));
+  await user.click(screen.getByRole("menuitem", { name: /^light$/i }));
+  expect(getShellThemeColorMeta()).toBe("#f4f4f8");
+});
+
 test("empty Local store opens Current Season view with empty hero and timeline", async () => {
   const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });

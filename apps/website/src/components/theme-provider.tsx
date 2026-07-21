@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import { syncThemeColorMeta, type EffectiveTheme } from "@/lib/shell-chrome-colors";
 
 type Theme = "dark" | "light" | "system";
 
@@ -37,18 +38,25 @@ export function ThemeProvider({
   useEffect(() => {
     const root = window.document.documentElement;
 
-    root.classList.remove("light", "dark");
+    const applyEffectiveTheme = (effectiveTheme: EffectiveTheme) => {
+      root.classList.remove("light", "dark");
+      root.classList.add(effectiveTheme);
+      syncThemeColorMeta(effectiveTheme);
+    };
 
     if (theme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light";
+      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+      applyEffectiveTheme(mediaQuery.matches ? "dark" : "light");
 
-      root.classList.add(systemTheme);
-      return;
+      const onSystemThemeChange = () => {
+        applyEffectiveTheme(mediaQuery.matches ? "dark" : "light");
+      };
+
+      mediaQuery.addEventListener("change", onSystemThemeChange);
+      return () => mediaQuery.removeEventListener("change", onSystemThemeChange);
     }
 
-    root.classList.add(theme);
+    applyEffectiveTheme(theme);
   }, [theme]);
 
   const value = {

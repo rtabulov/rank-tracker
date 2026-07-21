@@ -15,6 +15,13 @@ function matchesNavigationPattern(pattern: unknown, mode: RequestMode): boolean 
   });
 }
 
+test("PWA manifest chrome colors match the app shell palette", () => {
+  expect(websitePwaOptions.manifest?.background_color).toBe("#0a0a0f");
+  expect(websitePwaOptions.manifest?.theme_color).toBe("#f4f4f8");
+  expect(websitePwaOptions.manifest?.background_color).not.toBe("#ffffff");
+  expect(websitePwaOptions.manifest?.theme_color).not.toBe("#ffffff");
+});
+
 test("PWA manifest start and scope stay at site root", () => {
   expect(websitePwaOptions.manifest?.start_url).toBe("/");
   expect(websitePwaOptions.manifest?.scope).toBe("/");
