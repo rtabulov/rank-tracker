@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useEffect } from "react";
 import {
   Outlet,
   RouterProvider,
@@ -11,8 +10,7 @@ import {
   type AnyRouter,
   type RouterHistory,
 } from "@tanstack/react-router";
-import { AuthProvider } from "@/components/auth-provider";
-import { CloudSyncProvider } from "@/components/cloud-sync-provider";
+import { AppProviders, type AppProvidersProps } from "@/app-providers";
 import { DisplayNameGate } from "@/components/display-name-gate";
 import { HeaderActions } from "@/components/header-actions";
 import { HeaderEyebrow } from "@/components/header-eyebrow";
@@ -20,63 +18,15 @@ import {
   parsePublicSeasonSearch,
   PublicSeasonRoutePage,
 } from "@/components/public-season-route-page";
-import { PublicSeasonProvider } from "@/components/public-season-provider";
-import { ProfileProvider } from "@/components/profile-provider";
-import { LocalStoreProvider, useLocalStore } from "@/components/local-store-provider";
+import { useLocalStore } from "@/components/local-store-provider";
 import { SeasonView } from "@/components/season-view";
 import { ThemeHotkey } from "@/components/theme-hotkey";
 import { ThemeProvider } from "@/components/theme-provider";
-import { createMemoryAuthClient, createSupabaseAuthClient, type AuthClient } from "@/lib/auth";
-import {
-  createMemoryCloudEntriesClient,
-  createSupabaseCloudEntriesClient,
-  type CloudEntriesClient,
-} from "@/lib/cloud-entries";
-import {
-  createMemoryPublicSeasonClient,
-  createSupabasePublicSeasonClient,
-  type PublicSeasonClient,
-} from "@/lib/public-season";
-import {
-  createMemoryProfileClient,
-  createSupabaseProfileClient,
-  type ProfileClient,
-} from "@/lib/profile";
 import { PAGES_BASEPATH } from "@/lib/paths";
 import { resolveSelectedSeason } from "@/lib/resolve-selected-season";
 import { parseSeasonSearchParam } from "@/lib/season-search";
 import { getCurrentSeason, isSeasonNavigable } from "@/lib/seasons";
-import type { StorageAdapter, UnmigratedLocalStore } from "@/lib/types";
-
 export { PAGES_BASEPATH };
-
-function createDefaultAuthClient(): AuthClient {
-  if (import.meta.env.MODE === "test") {
-    return createMemoryAuthClient();
-  }
-  return createSupabaseAuthClient();
-}
-
-function createDefaultProfileClient(): ProfileClient {
-  if (import.meta.env.MODE === "test") {
-    return createMemoryProfileClient();
-  }
-  return createSupabaseProfileClient();
-}
-
-function createDefaultCloudEntriesClient(): CloudEntriesClient {
-  if (import.meta.env.MODE === "test") {
-    return createMemoryCloudEntriesClient();
-  }
-  return createSupabaseCloudEntriesClient();
-}
-
-function createDefaultPublicSeasonClient(): PublicSeasonClient {
-  if (import.meta.env.MODE === "test") {
-    return createMemoryPublicSeasonClient();
-  }
-  return createSupabasePublicSeasonClient();
-}
 
 type SeasonSearch = {
   season?: number;
@@ -219,44 +169,13 @@ function SeasonViewPage() {
 
 export function App({
   router = defaultRouter,
-  storageAdapter,
-  initialStore,
-  authClient,
-  profileClient,
-  entriesClient,
-  publicSeasonClient,
+  ...providerProps
 }: {
   router?: AnyRouter;
-  storageAdapter?: StorageAdapter;
-  initialStore?: UnmigratedLocalStore;
-  authClient?: AuthClient;
-  profileClient?: ProfileClient;
-  entriesClient?: CloudEntriesClient;
-  publicSeasonClient?: PublicSeasonClient;
-}) {
-  const [queryClient] = useState(() => new QueryClient());
-  const [resolvedAuthClient] = useState(() => authClient ?? createDefaultAuthClient());
-  const [resolvedProfileClient] = useState(() => profileClient ?? createDefaultProfileClient());
-  const [resolvedEntriesClient] = useState(
-    () => entriesClient ?? createDefaultCloudEntriesClient(),
-  );
-  const [resolvedPublicSeasonClient] = useState(
-    () => publicSeasonClient ?? createDefaultPublicSeasonClient(),
-  );
-
+} & Omit<AppProvidersProps, "children">) {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider authClient={resolvedAuthClient}>
-        <ProfileProvider profileClient={resolvedProfileClient}>
-          <LocalStoreProvider storageAdapter={storageAdapter} initialStore={initialStore}>
-            <CloudSyncProvider entriesClient={resolvedEntriesClient}>
-              <PublicSeasonProvider publicSeasonClient={resolvedPublicSeasonClient}>
-                <RouterProvider router={router} />
-              </PublicSeasonProvider>
-            </CloudSyncProvider>
-          </LocalStoreProvider>
-        </ProfileProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <AppProviders {...providerProps}>
+      <RouterProvider router={router} />
+    </AppProviders>
   );
 }
