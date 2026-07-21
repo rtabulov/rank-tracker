@@ -10,6 +10,7 @@ import {
 import { DisplayNameGate } from "@/components/display-name-gate";
 import { HeaderActions } from "@/components/header-actions";
 import { HeaderEyebrow } from "@/components/header-eyebrow";
+import { NotFoundPage } from "@/components/not-found-page";
 import { ThemeHotkey } from "@/components/theme-hotkey";
 import { ThemeProvider } from "@/components/theme-provider";
 import type { AppRouterContext } from "@/lib/router-context";
@@ -22,6 +23,7 @@ import "@/index.css";
 export const Route = createRootRouteWithContext<AppRouterContext>()({
   head: () => staticDocumentHead(),
   component: RootComponent,
+  notFoundComponent: NotFoundPage,
 });
 
 function RootComponent() {

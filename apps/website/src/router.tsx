@@ -1,5 +1,6 @@
 import { createRouter, type RouterHistory } from "@tanstack/react-router";
 import { SeasonViewSkeleton } from "@/components/season-view-skeleton";
+import { NotFoundPage } from "@/components/not-found-page";
 import { createMemoryPublicSeasonClient } from "@/lib/public-season";
 import type { AppRouterContext } from "@/lib/router-context";
 import { SITE_BASEPATH } from "@/lib/paths";
@@ -21,6 +22,7 @@ export function getRouter(options?: { history?: RouterHistory }) {
     defaultPendingComponent: SeasonViewSkeleton,
     defaultPendingMs: 250,
     defaultPendingMinMs: 350,
+    defaultNotFoundComponent: NotFoundPage,
   });
 }
 

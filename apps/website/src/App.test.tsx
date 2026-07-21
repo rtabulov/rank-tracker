@@ -87,6 +87,18 @@ test("global footer links Source and Report a problem in a new tab", async () =>
   );
 });
 
+test("unknown path shows the global not found shell with a path home", async () => {
+  const history = createMemoryHistory({ initialEntries: ["/no-such-page"] });
+  const router = createAppRouter({ history });
+
+  render(<App router={router} storageAdapter={createMemoryStorageAdapter()} />);
+
+  expect(await screen.findByRole("heading", { name: "Page not found" })).toBeInTheDocument();
+  expect(screen.getByText("That path isn’t in Rank Tracker.")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Back to Season view" })).toHaveAttribute("href", "/");
+  expect(screen.queryByLabelText("Season hero")).not.toBeInTheDocument();
+});
+
 /** Tailwind z-* on the direct shell child that owns `el` (competing stacking contexts). */
 function shellChildTailwindZ(shell: Element, el: Element): number {
   let current: Element | null = el;
