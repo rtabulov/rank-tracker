@@ -36,9 +36,9 @@ export const websitePwaOptions = {
     ],
   },
   workbox: {
-    // Exclude the HTML shell from precache; navigation uses NetworkFirst below.
+    // Exclude the SPA shell from precache; navigation uses NetworkFirst below.
     // Hashed /assets/* and root static files still use default precache patterns.
-    globIgnores: ["**/index.html"],
+    globIgnores: ["**/_shell.html", "**/index.html"],
     runtimeCaching: [
       {
         urlPattern: ({ request }) => request.mode === "navigate",
@@ -51,6 +51,6 @@ export const websitePwaOptions = {
         },
       },
     ],
-    navigateFallback: "/index.html",
+    navigateFallback: "/_shell.html",
   },
 } satisfies Partial<VitePWAOptions>;

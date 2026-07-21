@@ -15,11 +15,28 @@ export default defineConfig(({ mode }) => {
   return {
     base: "/",
     plugins: lazyPlugins(async () => {
+      const { tanstackStart } = await import("@tanstack/react-start/plugin/vite");
       const { default: react, reactCompilerPreset } = await import("@vitejs/plugin-react");
       const { default: babel } = await import("@rolldown/plugin-babel");
       const { default: tailwindcss } = await import("@tailwindcss/vite");
       const { VitePWA } = await import("vite-plugin-pwa");
       return [
+        tanstackStart({
+          spa: {
+            enabled: true,
+          },
+          client: {
+            entry: "./client.tsx",
+          },
+          start: {
+            entry: "./start.ts",
+          },
+          router: {
+            entry: "./router.tsx",
+            routesDirectory: "./routes",
+            generatedRouteTree: "./routeTree.gen.ts",
+          },
+        }),
         react(),
         babel({ presets: [reactCompilerPreset()] }),
         tailwindcss(),

@@ -348,9 +348,9 @@ test("invalid RS shows validation error in Log RS overlay", async () => {
 });
 
 test("saving Log RS persists Entry and shows populated Current Season view", async () => {
-  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-07-17T12:00:00.000Z"));
-  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const user = userEvent.setup();
   const storageAdapter = createMemoryStorageAdapter();
   const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
@@ -384,7 +384,7 @@ test("saving Log RS persists Entry and shows populated Current Season view", asy
 });
 
 test("populated Current Season with one Entry omits sparse summary metrics", async () => {
-  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-07-17T12:00:00"));
 
   const history = createMemoryHistory({ initialEntries: ["/"] });
@@ -423,7 +423,7 @@ test("populated Current Season with one Entry omits sparse summary metrics", asy
 });
 
 test("Current Season shows Δ last 12 hours when a baseline Entry exists", async () => {
-  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-07-17T12:00:00.000Z"));
 
   const history = createMemoryHistory({ initialEntries: ["/"] });
@@ -456,7 +456,7 @@ test("Current Season shows Δ last 12 hours when a baseline Entry exists", async
 });
 
 test("Current Season hero orders THIS SEASON, 12H, and 7D when both window metrics exist", async () => {
-  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-07-17T12:00:00.000Z"));
 
   const history = createMemoryHistory({ initialEntries: ["/"] });
@@ -497,10 +497,10 @@ test("Current Season hero orders THIS SEASON, 12H, and 7D when both window metri
 });
 
 test("past Season view omits Δ last 12 hours", async () => {
-  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-07-17T12:00:00.000Z"));
 
-  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const user = userEvent.setup();
   const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
@@ -1096,9 +1096,9 @@ test("Export downloads Local store JSON with dated filename", async () => {
       return element;
     });
 
-  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-07-17T12:00:00"));
-  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const user = userEvent.setup();
 
   render(
     <App
@@ -1407,9 +1407,9 @@ test("Edit Entry focuses RS input when drawer opens on narrow viewports", async 
 });
 
 test("saving Edit Entry persists changes with stable id", async () => {
-  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-07-17T12:00:00.000Z"));
-  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const user = userEvent.setup();
   const storageAdapter = createMemoryStorageAdapter();
   const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
@@ -1667,9 +1667,9 @@ test("Local store document shape is initialized with empty entries", async () =>
 });
 
 test("Log RS shows live Season preview derived from recordedAt", async () => {
-  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-07-17T12:00:00"));
-  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const user = userEvent.setup();
   const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
 
@@ -1685,9 +1685,9 @@ test("Log RS shows live Season preview derived from recordedAt", async () => {
 });
 
 test("Current Season Log RS with backdated recordedAt shows info chrome and navigates on save", async () => {
-  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-07-17T12:00:00"));
-  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const user = userEvent.setup();
   const storageAdapter = createMemoryStorageAdapter();
   const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
@@ -1719,9 +1719,9 @@ test("Current Season Log RS with backdated recordedAt shows info chrome and navi
 });
 
 test("past Season view blocks save when recordedAt belongs to another Season", async () => {
-  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-07-17T12:00:00"));
-  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const user = userEvent.setup();
   const initialStore = createStoreWithSeason10Entry();
   const storageAdapter = createMemoryStorageAdapter(initialStore);
   const history = createMemoryHistory({ initialEntries: ["/"] });
@@ -1744,9 +1744,9 @@ test("past Season view blocks save when recordedAt belongs to another Season", a
 });
 
 test("recordedAt outside every known Season rejects save and leaves Local store unchanged", async () => {
-  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-07-17T12:00:00"));
-  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const user = userEvent.setup();
   const storageAdapter = createMemoryStorageAdapter();
   const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
@@ -1771,9 +1771,9 @@ test("recordedAt outside every known Season rejects save and leaves Local store 
 });
 
 test("Edit Entry applies cross-Season rules on past Season mismatch", async () => {
-  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-07-17T12:00:00"));
-  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const user = userEvent.setup();
   const initialStore = createStoreWithSeason10Entry();
   const storageAdapter = createMemoryStorageAdapter(initialStore);
   const history = createMemoryHistory({ initialEntries: ["/"] });
@@ -1795,9 +1795,9 @@ test("Edit Entry applies cross-Season rules on past Season mismatch", async () =
 });
 
 test("Edit Entry from Current Season with cross-Season recordedAt navigates on save", async () => {
-  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-07-17T12:00:00"));
-  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const user = userEvent.setup();
   const initialStore = {
     version: 1 as const,
     entries: [
@@ -2103,9 +2103,9 @@ test("saving display name triggers initial cloud merge for existing local Entrie
 });
 
 test("local Log RS pushes a new Entry to cloud when sync-ready", async () => {
-  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-07-17T12:00:00.000Z"));
-  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const user = userEvent.setup();
   const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const { authClient, profileClient, entriesClient, userId } = createSignedInClients({
@@ -2142,9 +2142,9 @@ test("local Log RS pushes a new Entry to cloud when sync-ready", async () => {
 });
 
 test("local Edit Entry pushes updated Entry to cloud when sync-ready", async () => {
-  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-07-17T12:00:00.000Z"));
-  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const user = userEvent.setup();
   const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const { authClient, profileClient, entriesClient, userId } = createSignedInClients({
@@ -2259,9 +2259,9 @@ test("focus pull merges a remote-only Entry into Local store", async () => {
 });
 
 test("failed cloud push does not roll back a successful local Log RS", async () => {
-  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-07-17T12:00:00.000Z"));
-  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const user = userEvent.setup();
   const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const { authClient, profileClient, userId } = createSignedInClients({
@@ -2315,12 +2315,12 @@ function setNavigatorOnline(online: boolean) {
 }
 
 test("offline Log RS queues cloud push and flushes when back online", async () => {
-  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-07-17T12:00:00.000Z"));
   setNavigatorOnline(false);
   expect(navigator.onLine).toBe(false);
 
-  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const user = userEvent.setup();
   const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });
   const { authClient, profileClient, entriesClient, userId } = createSignedInClients({
