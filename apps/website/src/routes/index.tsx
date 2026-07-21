@@ -1,10 +1,7 @@
-import { useEffect } from "react";
-import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
-import { useLocalStore } from "@/components/local-store-provider";
+import { createFileRoute, redirect, useNavigate, useRouter } from "@tanstack/react-router";
 import { SeasonView } from "@/components/season-view";
 import { parseSeasonSearchParam } from "@/lib/season-search";
-import { resolveSelectedSeason } from "@/lib/resolve-selected-season";
-import { getCurrentSeason, isSeasonNavigable } from "@/lib/seasons";
+import { getCurrentSeason, getNavigableSeasons, isSeasonNavigable } from "@/lib/seasons";
 
 type SeasonSearch = {
   season?: number;
@@ -16,38 +13,55 @@ export const Route = createFileRoute("/")({
     const season = parseSeasonSearchParam(search);
     return season === undefined ? {} : { season };
   },
+  loaderDeps: ({ search }) => ({ season: search.season }),
+  beforeLoad: ({ search, context }) => {
+    const entries = context.getLocalEntries();
+    const currentSeasonNumber = getCurrentSeason().number;
+    if (search.season === undefined) {
+      throw redirect({
+        to: "/",
+        search: { season: currentSeasonNumber },
+        replace: true,
+      });
+    }
+    if (!isSeasonNavigable(search.season, entries)) {
+      throw redirect({
+        to: "/",
+        search: { season: currentSeasonNumber },
+        replace: true,
+      });
+    }
+  },
+  loader: ({ deps, context }) => {
+    const seasonNumber = deps.season;
+    if (seasonNumber === undefined) {
+      throw new Error("Season search param missing after beforeLoad");
+    }
+    const entries = context.getLocalEntries();
+    return {
+      seasonNumber,
+      navigableSeasons: getNavigableSeasons(entries),
+    };
+  },
   component: SeasonViewPage,
 });
 
 function SeasonViewPage() {
   const navigate = useNavigate({ from: Route.id });
-  const search = useSearch({ from: Route.id });
-  const { store } = useLocalStore();
-  const currentSeason = getCurrentSeason();
-  const selectedSeason = resolveSelectedSeason(search.season, store.entries);
-
-  useEffect(() => {
-    if (search.season === undefined) {
-      void navigate({
-        search: { season: currentSeason.number },
-        replace: true,
-      });
-      return;
-    }
-
-    if (!isSeasonNavigable(search.season, store.entries)) {
-      void navigate({
-        search: { season: currentSeason.number },
-        replace: true,
-      });
-    }
-  }, [currentSeason.number, navigate, search.season, store.entries]);
+  const router = useRouter();
+  const { seasonNumber } = Route.useLoaderData();
 
   return (
     <SeasonView
-      seasonNumber={selectedSeason}
-      onSeasonSelect={(seasonNumber) => {
-        void navigate({ search: { season: seasonNumber } });
+      seasonNumber={seasonNumber}
+      onSeasonSelect={(nextSeason) => {
+        void navigate({ search: { season: nextSeason } });
+      }}
+      onSeasonIntent={(nextSeason) => {
+        void router.preloadRoute({
+          to: "/",
+          search: { season: nextSeason },
+        });
       }}
     />
   );

@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import type { OAuthProvider } from "@/lib/auth";
 import { downloadExport } from "@/lib/export";
 import { validateImportDocument } from "@/lib/import";
+import { clearPublicSeasonIndexCache } from "@/lib/public-season-index-cache";
 import { publicSeasonLinkUrl } from "@/lib/public-link";
 import type { LocalStore } from "@/lib/types";
 
@@ -204,7 +205,9 @@ export function HeaderActions() {
     void setPublicSharing(isPublic).then((result) => {
       if (!result.ok) {
         setPublicSharingError(result.error);
+        return;
       }
+      clearPublicSeasonIndexCache();
     });
   };
 

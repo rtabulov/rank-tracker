@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { addEntry, deleteEntry, updateEntry } from "@/lib/entries";
 import { formatLocalWhen, formatSigned } from "@/lib/format";
-import type { Entry } from "@/lib/types";
+import type { Entry, Season } from "@/lib/types";
 import { computeSeasonSummary } from "@/lib/season-summary";
 import {
   getCurrentSeason,
@@ -24,15 +24,21 @@ import { cn } from "@/lib/utils";
 type SeasonViewProps = {
   seasonNumber: number;
   onSeasonSelect: (seasonNumber: number) => void;
+  /** Full Entry list, or season-scoped rows when `navigableSeasons` is provided. */
   entries?: Entry[];
+  /** When set, `entries` are treated as already filtered to `seasonNumber`. */
+  navigableSeasons?: Season[];
   readOnly?: boolean;
+  onSeasonIntent?: (seasonNumber: number) => void;
 };
 
 export function SeasonView({
   seasonNumber,
   onSeasonSelect,
   entries: entriesProp,
+  navigableSeasons: navigableSeasonsProp,
   readOnly = false,
+  onSeasonIntent,
 }: SeasonViewProps) {
   const { store, setStore } = useLocalStore();
   const [logRsOpen, setLogRsOpen] = useState(false);
@@ -40,11 +46,12 @@ export function SeasonView({
   const [deletingEntry, setDeletingEntry] = useState<Entry | null>(null);
   const entries = entriesProp ?? store.entries;
   const season = getSeasonByNumber(seasonNumber) ?? getCurrentSeason();
-  const seasonEntries = getEntriesForSeason(entries, season.number);
+  const seasonEntries =
+    navigableSeasonsProp !== undefined ? entries : getEntriesForSeason(entries, season.number);
   const isEmpty = seasonEntries.length === 0;
   const isCurrentSeason = season.number === getCurrentSeason().number;
   const summary = computeSeasonSummary(seasonEntries, { isCurrentSeason });
-  const navigableSeasons = getNavigableSeasons(entries);
+  const navigableSeasons = navigableSeasonsProp ?? getNavigableSeasons(entries);
   const timeline = [...seasonEntries].reverse();
 
   return (
@@ -217,6 +224,7 @@ export function SeasonView({
           seasons={navigableSeasons}
           selectedSeasonNumber={season.number}
           onSelect={onSeasonSelect}
+          onIntent={onSeasonIntent}
         />
       </div>
 

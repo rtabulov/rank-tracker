@@ -2065,7 +2065,9 @@ test("sync-ready sign-in downloads cloud-only Entries into Local store", async (
     />,
   );
 
-  expect(await screen.findByLabelText("Season hero")).toHaveTextContent("51,000");
+  await waitFor(() => {
+    expect(screen.getByLabelText("Season hero")).toHaveTextContent("51,000");
+  });
   expect(screen.getByText(/RS 51,000/i)).toBeInTheDocument();
 });
 
@@ -2704,11 +2706,19 @@ test("private Public link shows the same unavailable shell as an unknown name", 
 test("invalid Public link display name shows unavailable without calling public read", async () => {
   const history = createMemoryHistory({ initialEntries: ["/p/ab"] });
   const router = createAppRouter({ history });
-  const getPublicSeason = vi.fn(async () => ({
+  const getPublicSeasonIndex = vi.fn(async () => ({
     displayName: "ab",
+    seasonNumbers: [11],
+  }));
+  const getPublicSeasonEntries = vi.fn(async () => ({
+    displayName: "ab",
+    seasonNumber: 11,
     entries: [],
   }));
-  const publicSeasonClient: PublicSeasonClient = { getPublicSeason };
+  const publicSeasonClient: PublicSeasonClient = {
+    getPublicSeasonIndex,
+    getPublicSeasonEntries,
+  };
 
   render(
     <App
@@ -2721,7 +2731,51 @@ test("invalid Public link display name shows unavailable without calling public 
   expect(
     await screen.findByRole("heading", { name: "Public Season view unavailable" }),
   ).toBeInTheDocument();
-  expect(getPublicSeason).not.toHaveBeenCalled();
+  expect(getPublicSeasonIndex).not.toHaveBeenCalled();
+  expect(getPublicSeasonEntries).not.toHaveBeenCalled();
+});
+
+test("Public Season load failure shows Retry instead of unavailable", async () => {
+  const user = userEvent.setup();
+  const history = createMemoryHistory({ initialEntries: ["/p/FinalsFan?season=11"] });
+  const router = createAppRouter({ history });
+  let shouldFail = true;
+  const publicSeasonClient: PublicSeasonClient = {
+    getPublicSeasonIndex: async () => ({
+      displayName: "FinalsFan",
+      seasonNumbers: [11],
+    }),
+    getPublicSeasonEntries: async () => {
+      if (shouldFail) {
+        throw new Error("network down");
+      }
+      return {
+        displayName: "FinalsFan",
+        seasonNumber: 11,
+        entries: [
+          entryFixture({ id: "public-entry", rs: 33000, recordedAt: "2026-07-16T10:00:00.000Z" }),
+        ],
+      };
+    },
+  };
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      publicSeasonClient={publicSeasonClient}
+    />,
+  );
+
+  expect(
+    await screen.findByRole("heading", { name: "Couldn’t load Public Season view" }),
+  ).toBeInTheDocument();
+  expect(screen.getByText("network down")).toBeInTheDocument();
+
+  shouldFail = false;
+  await user.click(screen.getByRole("button", { name: "Retry" }));
+
+  expect(await screen.findByLabelText("Season hero")).toHaveTextContent("33,000");
 });
 
 test("populated Public Season view renders read-only Season chrome with Viewing strip", async () => {

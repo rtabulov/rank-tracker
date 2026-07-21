@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useRef, useState, type ReactNode } from "react";
 import {
   LOCAL_STORE_KEY,
   createLocalStorageAdapter,
@@ -6,11 +6,12 @@ import {
   saveLocalStore,
 } from "@/lib/local-store";
 import { migrateLocalStore } from "@/lib/import";
-import type { LocalStore, StorageAdapter, UnmigratedLocalStore } from "@/lib/types";
+import type { Entry, LocalStore, StorageAdapter, UnmigratedLocalStore } from "@/lib/types";
 
 type LocalStoreContextValue = {
   store: LocalStore;
   setStore: (store: LocalStore) => void;
+  getEntries: () => Entry[];
   storageAdapter: StorageAdapter;
 };
 
@@ -43,9 +44,14 @@ export function LocalStoreProvider({
     return migrated;
   });
 
-  const value = {
+  const storeRef = useRef(store);
+  storeRef.current = store;
+
+  const value: LocalStoreContextValue = {
     store,
+    getEntries: () => storeRef.current.entries,
     setStore: (next: LocalStore) => {
+      storeRef.current = next;
       setStoreState(next);
       saveLocalStore(storageAdapter, next);
     },

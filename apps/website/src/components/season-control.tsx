@@ -7,9 +7,15 @@ type SeasonControlProps = {
   seasons: Season[];
   selectedSeasonNumber: number;
   onSelect: (seasonNumber: number) => void;
+  onIntent?: (seasonNumber: number) => void;
 };
 
-export function SeasonControl({ seasons, selectedSeasonNumber, onSelect }: SeasonControlProps) {
+export function SeasonControl({
+  seasons,
+  selectedSeasonNumber,
+  onSelect,
+  onIntent,
+}: SeasonControlProps) {
   const currentSeasonNumber = getCurrentSeason().number;
 
   return (
@@ -41,6 +47,12 @@ export function SeasonControl({ seasons, selectedSeasonNumber, onSelect }: Seaso
             role="radio"
             aria-checked={selected}
             aria-label={label}
+            onPointerEnter={() => {
+              onIntent?.(season.number);
+            }}
+            onFocus={() => {
+              onIntent?.(season.number);
+            }}
             className={cn(
               "rounded-none font-heading text-xs uppercase tracking-[0.15em]",
               !selected && "text-muted-foreground",

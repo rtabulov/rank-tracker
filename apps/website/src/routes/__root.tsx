@@ -1,9 +1,9 @@
-import type { ReactNode } from "react";
+import { type ReactNode } from "react";
 import {
   HeadContent,
   Outlet,
   Scripts,
-  createRootRoute,
+  createRootRouteWithContext,
   useHydrated,
   useRouter,
 } from "@tanstack/react-router";
@@ -12,13 +12,14 @@ import { HeaderActions } from "@/components/header-actions";
 import { HeaderEyebrow } from "@/components/header-eyebrow";
 import { ThemeHotkey } from "@/components/theme-hotkey";
 import { ThemeProvider } from "@/components/theme-provider";
+import type { AppRouterContext } from "@/lib/router-context";
 import { staticDocumentHead } from "@/lib/static-document";
 // Global styles must live on a route module so Start's SSR style collector
 // can emit them in the document head. Importing only from client.tsx left
 // `/@tanstack-start/styles.css` empty and caused a white unstyled flash.
 import "@/index.css";
 
-export const Route = createRootRoute({
+export const Route = createRootRouteWithContext<AppRouterContext>()({
   head: () => staticDocumentHead(),
   component: RootComponent,
 });
