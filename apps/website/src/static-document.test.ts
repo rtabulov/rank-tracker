@@ -5,6 +5,7 @@ import { expect, test } from "vite-plus/test";
 import {
   PRODUCTION_OG_IMAGE_URL,
   PRODUCTION_URL,
+  SHELL_CRITICAL_CSS,
   SITE_DESCRIPTION,
   SITE_TITLE,
   THEME_BOOT_SCRIPT,
@@ -47,6 +48,14 @@ test("static document exposes theme-color metas aligned with the shell palette",
 test("static document boot script syncs theme-color to the resolved shell background", () => {
   expect(THEME_BOOT_SCRIPT).toMatch(/data-shell-chrome/);
   expect(THEME_BOOT_SCRIPT).toMatch(/resolved === "dark" \? "#0a0a0f" : "#f4f4f8"/);
+});
+
+test("static document ships critical shell background CSS for first paint", () => {
+  const { styles } = staticDocumentHead();
+  expect(styles).toEqual([{ children: SHELL_CRITICAL_CSS }]);
+  expect(SHELL_CRITICAL_CSS).toContain("background-color:#f4f4f8");
+  expect(SHELL_CRITICAL_CSS).toContain("html.dark");
+  expect(SHELL_CRITICAL_CSS).toContain("background-color:#0a0a0f");
 });
 
 test("static document exposes the Rank Tracker title for crawlers", () => {

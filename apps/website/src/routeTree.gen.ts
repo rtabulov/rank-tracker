@@ -8,80 +8,80 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from "./routes/__root";
-import { Route as IndexRouteImport } from "./routes/index";
-import { Route as PDisplayNameRouteImport } from "./routes/p.$displayName";
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as PDisplayNameRouteImport } from './routes/p.$displayName'
 
 const IndexRoute = IndexRouteImport.update({
-  id: "/",
-  path: "/",
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const PDisplayNameRoute = PDisplayNameRouteImport.update({
-  id: "/p/$displayName",
-  path: "/p/$displayName",
+  id: '/p/$displayName',
+  path: '/p/$displayName',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 
 export interface FileRoutesByFullPath {
-  "/": typeof IndexRoute;
-  "/p/$displayName": typeof PDisplayNameRoute;
+  '/': typeof IndexRoute
+  '/p/$displayName': typeof PDisplayNameRoute
 }
 export interface FileRoutesByTo {
-  "/": typeof IndexRoute;
-  "/p/$displayName": typeof PDisplayNameRoute;
+  '/': typeof IndexRoute
+  '/p/$displayName': typeof PDisplayNameRoute
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport;
-  "/": typeof IndexRoute;
-  "/p/$displayName": typeof PDisplayNameRoute;
+  __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
+  '/p/$displayName': typeof PDisplayNameRoute
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath;
-  fullPaths: "/" | "/p/$displayName";
-  fileRoutesByTo: FileRoutesByTo;
-  to: "/" | "/p/$displayName";
-  id: "__root__" | "/" | "/p/$displayName";
-  fileRoutesById: FileRoutesById;
+  fileRoutesByFullPath: FileRoutesByFullPath
+  fullPaths: '/' | '/p/$displayName'
+  fileRoutesByTo: FileRoutesByTo
+  to: '/' | '/p/$displayName'
+  id: '__root__' | '/' | '/p/$displayName'
+  fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute;
-  PDisplayNameRoute: typeof PDisplayNameRoute;
+  IndexRoute: typeof IndexRoute
+  PDisplayNameRoute: typeof PDisplayNameRoute
 }
 
-declare module "@tanstack/react-router" {
+declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    "/": {
-      id: "/";
-      path: "/";
-      fullPath: "/";
-      preLoaderRoute: typeof IndexRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/p/$displayName": {
-      id: "/p/$displayName";
-      path: "/p/$displayName";
-      fullPath: "/p/$displayName";
-      preLoaderRoute: typeof PDisplayNameRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/p/$displayName': {
+      id: '/p/$displayName'
+      path: '/p/$displayName'
+      fullPath: '/p/$displayName'
+      preLoaderRoute: typeof PDisplayNameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   PDisplayNameRoute: PDisplayNameRoute,
-};
+}
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>();
+  ._addFileTypes<FileRouteTypes>()
 
-import type { getRouter } from "./router.tsx";
-import type { startInstance } from "./start.ts";
-declare module "@tanstack/react-start" {
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
   interface Register {
-    ssr: true;
-    router: Awaited<ReturnType<typeof getRouter>>;
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>;
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
   }
 }

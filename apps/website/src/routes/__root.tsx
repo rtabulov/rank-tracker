@@ -1,11 +1,22 @@
 import type { ReactNode } from "react";
-import { HeadContent, Outlet, Scripts, createRootRoute, useRouter } from "@tanstack/react-router";
+import {
+  HeadContent,
+  Outlet,
+  Scripts,
+  createRootRoute,
+  useHydrated,
+  useRouter,
+} from "@tanstack/react-router";
 import { DisplayNameGate } from "@/components/display-name-gate";
 import { HeaderActions } from "@/components/header-actions";
 import { HeaderEyebrow } from "@/components/header-eyebrow";
 import { ThemeHotkey } from "@/components/theme-hotkey";
 import { ThemeProvider } from "@/components/theme-provider";
 import { staticDocumentHead } from "@/lib/static-document";
+// Global styles must live on a route module so Start's SSR style collector
+// can emit them in the document head. Importing only from client.tsx left
+// `/@tanstack-start/styles.css` empty and caused a white unstyled flash.
+import "@/index.css";
 
 export const Route = createRootRoute({
   head: () => staticDocumentHead(),
@@ -29,7 +40,9 @@ function RootComponent() {
 
 function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en">
+    // Theme boot script (and some extensions) set classes on <html> before
+    // React hydrates; suppress so that intentional mismatch does not bail.
+    <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
@@ -42,7 +55,12 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 function AppShell() {
+  // SPA shell SSR renders with isShell(); the client hydrates with isShell
+  // false. Gate interactive chrome on useHydrated so the first client paint
+  // still matches the shell HTML (eyebrow placeholder, no actions/gate).
+  const hydrated = useHydrated();
   const isShell = useRouter().isShell();
+  const showInteractiveChrome = hydrated && !isShell;
 
   return (
     <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
@@ -59,21 +77,21 @@ function AppShell() {
         <header className="relative z-10 mx-auto w-full max-w-lg px-4 pt-4">
           <div className="hud-chamfer flex items-start justify-between gap-3 border border-primary/30 bg-card/80 p-3">
             <div>
-              {isShell ? (
+              {showInteractiveChrome ? (
+                <HeaderEyebrow />
+              ) : (
                 <p className="font-heading text-[10px] tracking-[0.35em] text-hud-cyan">
                   Rank Tracker
                 </p>
-              ) : (
-                <HeaderEyebrow />
               )}
               <h1 className="font-heading text-lg font-black uppercase tracking-[0.2em] text-primary hud-glow-primary">
                 Rank Tracker
               </h1>
             </div>
-            {isShell ? null : <HeaderActions />}
+            {showInteractiveChrome ? <HeaderActions /> : null}
           </div>
         </header>
-        {isShell ? null : <DisplayNameGate />}
+        {showInteractiveChrome ? <DisplayNameGate /> : null}
         <div className="relative z-10 flex flex-1 flex-col">
           <Outlet />
         </div>

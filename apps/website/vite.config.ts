@@ -17,6 +17,13 @@ export default defineConfig(({ mode }) => {
     build: {
       emptyOutDir: true,
     },
+    // Fail loudly if 5173 is taken — silent port hops left a dead Vite on
+    // :5173 (assets OK, no Start SSR middleware → Connect "Cannot GET /")
+    // while healthy `vp dev` moved to 5174+.
+    server: {
+      port: 5173,
+      strictPort: true,
+    },
     preview: {
       port: 4173,
     },

@@ -5,6 +5,12 @@ export const SITE_DESCRIPTION = "Personal Rank Score history for The Finals rank
 export const PRODUCTION_URL = "https://rank.rtabulov.dev/";
 export const PRODUCTION_OG_IMAGE_URL = "https://rank.rtabulov.dev/og.png";
 
+/**
+ * Critical first-paint background so the shell is never a white flash while
+ * the full stylesheet (Tailwind + fonts) is still downloading.
+ */
+export const SHELL_CRITICAL_CSS = `html,body{background-color:${SHELL_BACKGROUND_LIGHT}}html.dark,html.dark body{background-color:${SHELL_BACKGROUND_DARK}}`;
+
 /** Inline boot script: resolve theme class + sync theme-color before paint. */
 export const THEME_BOOT_SCRIPT = `try {
   const storageKey = "vite-ui-theme";
@@ -55,6 +61,7 @@ export function staticDocumentHead() {
       },
     ],
     links: [{ rel: "icon", type: "image/svg+xml", href: "/favicon.svg" }],
+    styles: [{ children: SHELL_CRITICAL_CSS }],
     scripts: [{ children: THEME_BOOT_SCRIPT }],
     title: SITE_TITLE,
   };
