@@ -13,9 +13,9 @@
   "devDependencies": {
     "@ai-hero/sandcastle": "catalog:",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:",
     "supabase": "catalog:",
     "tsx": "catalog:",
+    "typescript": "catalog:",
     "vite": "catalog:",
     "vite-plus": "catalog:"
   },
