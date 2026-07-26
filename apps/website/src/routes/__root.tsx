@@ -21,6 +21,9 @@ import { staticDocumentHead } from "@/lib/static-document";
 import "@/index.css";
 
 export const Route = createRootRouteWithContext<AppRouterContext>()({
+  // SPA shell prerender must SSR the root document (`<html>`/`<head>`/`Scripts`).
+  // `defaultSsr: false` would otherwise skip RootDocument and emit a bare body stream.
+  ssr: true,
   head: () => staticDocumentHead(),
   component: RootComponent,
   notFoundComponent: NotFoundPage,
