@@ -28,12 +28,18 @@ export default defineConfig(({ mode }) => {
       port: 4173,
     },
     plugins: lazyPlugins(async () => {
+      const { cloudflare } = await import("@cloudflare/vite-plugin");
       const { tanstackStart } = await import("@tanstack/react-start/plugin/vite");
       const { default: react, reactCompilerPreset } = await import("@vitejs/plugin-react");
       const { default: babel } = await import("@rolldown/plugin-babel");
       const { default: tailwindcss } = await import("@tailwindcss/vite");
       const { VitePWA } = await import("vite-plugin-pwa");
+      // Cloudflare must run before tanstackStart (official Start + Workers order).
+      // Skip under Vitest — the plugin targets Workers environments, not jsdom tests.
+      const cloudflarePlugins =
+        mode === "test" ? [] : [cloudflare({ viteEnvironment: { name: "ssr" } })];
       return [
+        ...cloudflarePlugins,
         tanstackStart({
           spa: {
             enabled: true,

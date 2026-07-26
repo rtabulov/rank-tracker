@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "rank-tracker",
+  // Keep current with Cloudflare's recommended floor for Start + Workers.
+  "compatibility_date": "2026-07-26",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "@tanstack/react-start/server-entry",
+  // Prod only on the custom domain — no public *.workers.dev hostname.
+  "workers_dev": false,
+  "routes": [
+    {
+      "pattern": "rank.rtabulov.dev",
+      "custom_domain": true,
+    },
+  ],
+}

@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vp dev",
     "build": "tsc && vp build",
-    "preview": "serve dist/client -s -l 4173",
+    "preview": "vp preview",
+    "deploy": "vp run build && wrangler deploy",
     "test": "vp test"
   },
   "dependencies": {
@@ -34,6 +35,7 @@
   },
   "devDependencies": {
     "@babel/core": "^8.0.1",
+    "@cloudflare/vite-plugin": "catalog:",
     "@rolldown/plugin-babel": "^0.2.3",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -44,10 +46,10 @@
     "@vitejs/plugin-react": "^6.0.3",
     "babel-plugin-react-compiler": "^1.0.0",
     "jsdom": "^29.1.1",
-    "serve": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vite-plugin-pwa": "catalog:",
-    "vite-plus": "catalog:"
+    "vite-plus": "catalog:",
+    "wrangler": "catalog:"
   }
 }

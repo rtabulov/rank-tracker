@@ -60,4 +60,12 @@ Product terminology and behaviour are defined in [`CONTEXT.md`](./CONTEXT.md). D
 
 ## Deployment
 
-Production hosting is not wired from this repo yet. See [#96](https://github.com/rtabulov/rank-tracker/issues/96) for the planned move to a new hosting solution.
+`apps/website` deploys to **Cloudflare Workers** at [rank.rtabulov.dev](https://rank.rtabulov.dev/). See [`docs/adr/0003-cloudflare-workers-hosting.md`](./docs/adr/0003-cloudflare-workers-hosting.md).
+
+Production deploys run from GitHub Actions on push to `main` (and `workflow_dispatch`). The workflow builds with `VITE_SUPABASE_*` secrets, then `wrangler deploy` using `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
+
+Local deploy (after `vp install` and a logged-in Wrangler session):
+
+```bash
+vp run website#deploy
+```

@@ -7,6 +7,7 @@ catalogMode: prefer
 
 catalog:
   "@ai-hero/sandcastle": ^0.12.0
+  '@cloudflare/vite-plugin': ^1.47.0
   "@fontsource/jetbrains-mono": ^5.2.8
   "@fontsource/orbitron": ^5.2.8
   '@supabase/supabase-js': ^2.110.7
@@ -23,7 +24,6 @@ catalog:
   lucide-react: ^1.24.0
   nanoid: ^3.3.16
   radix-ui: ^1.6.2
-  serve: ^14.2.6
   shadcn: ^4.13.0
   supabase: ^2.109.1
   tailwind-merge: ^3.6.0
@@ -37,6 +37,7 @@ catalog:
   vite: npm:@voidzero-dev/vite-plus-core@0.2.6
   vite-plugin-pwa: ^1.3.0
   vite-plus: 0.2.6
+  wrangler: ^4.114.0
   zod: ^4.4.3
 overrides:
   vite: "catalog:"
@@ -48,3 +49,4 @@ peerDependencyRules:
 allowBuilds:
   esbuild: true
   puppeteer: set this to true or false
+  workerd: true
