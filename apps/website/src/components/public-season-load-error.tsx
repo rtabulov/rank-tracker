@@ -1,5 +1,5 @@
 import { useRouter } from "@tanstack/react-router";
-import { PublicRouteMeta } from "@/components/public-route-meta";
+import { PublicSeasonDocumentHeadSync } from "@/components/public-season-document-head-sync";
 import { TrackYourOwnRsButton } from "@/components/track-your-own-rs-link";
 import { Button } from "@/components/ui/button";
 
@@ -8,7 +8,7 @@ export function PublicSeasonLoadError({ error }: { error: Error }) {
 
   return (
     <>
-      <PublicRouteMeta />
+      <PublicSeasonDocumentHeadSync input={{ kind: "unavailable" }} />
       <main className="mx-auto flex w-full max-w-lg flex-1 flex-col items-start gap-3 px-4 pb-8 pt-10">
         <h2 className="font-heading text-xl font-bold tracking-[0.12em] text-foreground">
           Couldn’t load Public Season view

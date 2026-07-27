@@ -5,7 +5,7 @@ import {
   useNavigate,
   useRouter,
 } from "@tanstack/react-router";
-import { PublicRouteMeta } from "@/components/public-route-meta";
+import { PublicSeasonDocumentHeadSync } from "@/components/public-season-document-head-sync";
 import { PublicSeasonLoadError } from "@/components/public-season-load-error";
 import { PublicSeasonUnavailable } from "@/components/public-season-unavailable";
 import { PublicSeasonViewSkeleton } from "@/components/season-view-skeleton";
@@ -13,6 +13,7 @@ import { SeasonView } from "@/components/season-view";
 import { TrackYourOwnRsInlineLink } from "@/components/track-your-own-rs-link";
 import { ViewingStrip } from "@/components/viewing-strip";
 import { validateDisplayName } from "@/lib/display-name";
+import { publicSeasonDocumentHead } from "@/lib/public-season-document-head";
 import { loadPublicSeasonIndex } from "@/lib/public-season-index-cache";
 import { parseSeasonSearchParam } from "@/lib/season-search";
 import { isSeasonNumberNavigable, seasonsFromNumbers } from "@/lib/season-navigability";
@@ -24,8 +25,10 @@ type PublicSeasonSearch = {
 
 const ENTRIES_STALE_MS = 30_000;
 
+const unavailableHead = publicSeasonDocumentHead({ kind: "unavailable" });
+
 export const Route = createFileRoute("/p/$displayName")({
-  ssr: false,
+  ssr: true,
   validateSearch: (search: Record<string, unknown>): PublicSeasonSearch => {
     const season = parseSeasonSearchParam(search);
     return season === undefined ? {} : { season };
@@ -98,6 +101,15 @@ export const Route = createFileRoute("/p/$displayName")({
       seasonNumbers: publicIndex.seasonNumbers,
     };
   },
+  head: ({ loaderData }) => {
+    if (loaderData === undefined) {
+      return unavailableHead;
+    }
+    return publicSeasonDocumentHead({
+      kind: "available",
+      displayName: loaderData.displayName,
+    });
+  },
   component: PublicSeasonViewPage,
 });
 
@@ -109,7 +121,7 @@ function PublicSeasonViewPage() {
 
   return (
     <>
-      <PublicRouteMeta />
+      <PublicSeasonDocumentHeadSync input={{ kind: "available", displayName }} />
       <div className="mx-auto w-full max-w-lg px-4 pt-2">
         <ViewingStrip displayName={displayName} />
       </div>

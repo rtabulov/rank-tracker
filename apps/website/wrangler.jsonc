@@ -7,10 +7,10 @@
   "main": "@tanstack/react-start/server-entry",
   // Prod only on the custom domain — no public *.workers.dev hostname.
   "workers_dev": false,
-  // Serve prerendered index.html for client navigations; Worker still handles
-  // non-asset requests (e.g. server functions) when no static file matches.
+  // Unmatched document paths hit the Worker (Public Season SSR + client-only
+  // `/`). Do not use SPA index.html fallback — that skips SSR for `/p/*`.
   "assets": {
-    "not_found_handling": "single-page-application",
+    "not_found_handling": "none",
   },
   "routes": [
     {

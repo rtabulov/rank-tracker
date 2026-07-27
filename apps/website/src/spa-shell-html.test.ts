@@ -8,8 +8,11 @@ const indexHtmlPath = path.resolve(
   "../dist/client/index.html",
 );
 
+// Without SPA mode there is no prerendered shell index.html; the Worker
+// emits the document at request time. Keep this probe so a future
+// accidental SPA/prerender re-enable still has a smoke check.
 test.skipIf(!existsSync(indexHtmlPath))(
-  "prerendered SPA shell is a full document with layout chrome and bootstrap tags",
+  "built client index.html is a full document with bootstrap tags when present",
   () => {
     const html = readFileSync(indexHtmlPath, "utf8");
 
@@ -17,10 +20,7 @@ test.skipIf(!existsSync(indexHtmlPath))(
     expect(html).toContain("<html");
     expect(html).toContain("<head>");
     expect(html).toContain("<body>");
-    expect(html).toContain("Rank Tracker");
-    expect(html).toContain('property="og:url"');
     expect(html).toMatch(/rel="stylesheet"/);
     expect(html).toMatch(/type="module"/);
-    expect(html).toMatch(/src="\/assets\/index-[^"]+\.js"/);
   },
 );

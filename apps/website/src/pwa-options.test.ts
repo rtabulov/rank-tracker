@@ -33,15 +33,15 @@ test("PWA manifest includes installable PNG icon sizes", () => {
   expect(sizes).toContain("512x512");
 });
 
-test("PWA precache excludes the SPA shell while keeping default hashed asset patterns", () => {
+test("PWA precache excludes document shells while keeping default hashed asset patterns", () => {
   expect(websitePwaOptions.workbox?.globIgnores).toContain("**/_shell.html");
   expect(websitePwaOptions.workbox?.globIgnores).toContain("**/index.html");
   expect(websitePwaOptions.workbox).not.toHaveProperty("globPatterns");
 });
 
-test("PWA navigation uses NetworkFirst with single-entry offline fallback and no API runtime rules", () => {
+test("PWA navigation uses NetworkFirst without an SPA index.html fallback", () => {
   expect(websitePwaOptions.strategies).toBe("generateSW");
-  expect(websitePwaOptions.workbox?.navigateFallback).toBe("/index.html");
+  expect(websitePwaOptions.workbox?.navigateFallback).toBeNull();
 
   const runtimeCaching = websitePwaOptions.workbox?.runtimeCaching ?? [];
   expect(runtimeCaching).toHaveLength(1);

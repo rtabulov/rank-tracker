@@ -9,7 +9,10 @@ function readWranglerConfig(): {
   main?: string;
   compatibility_flags?: string[];
   workers_dev?: boolean;
-  assets?: { not_found_handling?: string };
+  assets?: {
+    not_found_handling?: string;
+    run_worker_first?: boolean | string[];
+  };
   routes?: Array<{ pattern?: string; custom_domain?: boolean }>;
 } {
   const raw = readFileSync(path.join(websiteRoot, "wrangler.jsonc"), "utf8");
@@ -35,7 +38,8 @@ test("Wrangler binds production custom domain and disables workers.dev", () => {
   ]);
 });
 
-test("Wrangler serves the SPA shell for unmatched document navigations", () => {
+test("Wrangler leaves unmatched documents to the Worker (no SPA fallback)", () => {
   const config = readWranglerConfig();
-  expect(config.assets?.not_found_handling).toBe("single-page-application");
+  expect(config.assets?.not_found_handling).toBe("none");
+  expect(config.assets?.run_worker_first).toBeUndefined();
 });

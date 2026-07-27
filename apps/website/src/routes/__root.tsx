@@ -21,8 +21,9 @@ import { staticDocumentHead } from "@/lib/static-document";
 import "@/index.css";
 
 export const Route = createRootRouteWithContext<AppRouterContext>()({
-  // SPA shell prerender must SSR the root document (`<html>`/`<head>`/`Scripts`).
-  // `defaultSsr: false` would otherwise skip RootDocument and emit a bare body stream.
+  // Root must SSR so the document shell (`<html>`/`<head>`/`Scripts`) and
+  // selective child SSR (Public Season) can emit first-paint HTML. Owner `/`
+  // stays `ssr: false` via defaultSsr + route override.
   ssr: true,
   head: () => staticDocumentHead(),
   component: RootComponent,
@@ -61,9 +62,9 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 function AppShell() {
-  // SPA shell SSR renders with isShell(); the client hydrates with isShell
-  // false. Gate interactive chrome on useHydrated so the first client paint
-  // still matches the shell HTML (eyebrow placeholder, no actions/gate).
+  // Client-only child routes (ssr: false) SSR the root with isShell()/pending
+  // fallback; the client then hydrates the real match. Gate interactive chrome
+  // on useHydrated so the first client paint still matches that shell HTML.
   const hydrated = useHydrated();
   const isShell = useRouter().isShell();
   const showInteractiveChrome = hydrated && !isShell;

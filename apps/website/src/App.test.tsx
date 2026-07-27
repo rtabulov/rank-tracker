@@ -3062,7 +3062,7 @@ test("signed-in Player on their own Public link gets the public read-only surfac
   expect(screen.queryByRole("button", { name: "Log RS" })).not.toBeInTheDocument();
 });
 
-test("Public Season routes set robots noindex", async () => {
+test("Public Season unavailable routes set robots noindex", async () => {
   const history = createMemoryHistory({ initialEntries: ["/p/unknown-player"] });
   const router = createAppRouter({ history });
   const publicSeasonClient = createPublicSeasonClient();
@@ -3077,9 +3077,39 @@ test("Public Season routes set robots noindex", async () => {
 
   await screen.findByRole("heading", { name: "Public Season view unavailable" });
 
+  expect(document.title).toBe("Public Season view unavailable");
   expect(document.querySelector('meta[name="robots"]')?.getAttribute("content")).toBe(
     "noindex, nofollow",
   );
+});
+
+test("available Public Season view sets shareable title and does not noindex", async () => {
+  const history = createMemoryHistory({ initialEntries: ["/p/FinalsFan"] });
+  const router = createAppRouter({ history });
+  const publicSeasonClient = createPublicSeasonClient({
+    players: {
+      FinalsFan: {
+        displayName: "FinalsFan",
+        isPublic: true,
+        entries: [entryFixture({ id: "e1", rs: 28000, recordedAt: "2026-07-16T10:00:00.000Z" })],
+      },
+    },
+  });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      publicSeasonClient={publicSeasonClient}
+    />,
+  );
+
+  expect(await screen.findByLabelText("Viewing")).toHaveTextContent("FinalsFan");
+  expect(document.title).toBe("FinalsFan · Rank Tracker");
+  expect(document.querySelector('meta[name="description"]')?.getAttribute("content")).toBe(
+    "Public Rank Score history for FinalsFan on The Finals.",
+  );
+  expect(document.querySelector('meta[name="robots"]')).toBeNull();
 });
 
 function createSignedInClientsWithPublicSeason(input: {

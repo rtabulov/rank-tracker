@@ -41,13 +41,6 @@ export default defineConfig(({ mode }) => {
       return [
         ...cloudflarePlugins,
         tanstackStart({
-          spa: {
-            enabled: true,
-            prerender: {
-              // Static hosts and `vp preview` serve the prerendered shell as index.html.
-              outputPath: "/index",
-            },
-          },
           client: {
             entry: "./client.tsx",
           },
