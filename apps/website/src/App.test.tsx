@@ -2024,6 +2024,93 @@ test("returning signed-in player with display name skips display name step", asy
   expect(screen.queryByRole("region", { name: "Choose display name" })).not.toBeInTheDocument();
 });
 
+test("display name gate never flashes while a known profile is still loading", async () => {
+  const history = createMemoryHistory({ initialEntries: ["/"] });
+  const router = createAppRouter({ history });
+  const { authClient } = createSignedInClients({ displayName: "FinalsFan" });
+
+  let resolveProfile!: (profile: { displayName: string; isPublic: boolean } | null) => void;
+  const profilePromise = new Promise<{ displayName: string; isPublic: boolean } | null>(
+    (resolve) => {
+      resolveProfile = resolve;
+    },
+  );
+  const profileClient: ProfileClient = {
+    getProfile: async () => profilePromise,
+    setDisplayName: async () => ({ ok: false, error: "unused" }),
+    setIsPublic: async () => ({ ok: false, error: "unused" }),
+  };
+
+  const gateSeen = { current: false };
+  const observer = new MutationObserver(() => {
+    if (document.querySelector('[aria-label="Choose display name"]') !== null) {
+      gateSeen.current = true;
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={authClient}
+      profileClient={profileClient}
+    />,
+  );
+
+  await screen.findByRole("button", { name: "Data" });
+  expect(gateSeen.current).toBe(false);
+  expect(screen.queryByRole("region", { name: "Choose display name" })).not.toBeInTheDocument();
+
+  resolveProfile({ displayName: "FinalsFan", isPublic: false });
+  await waitFor(() => {
+    expect(screen.getByText("FinalsFan // RANK")).toBeInTheDocument();
+  });
+  expect(gateSeen.current).toBe(false);
+  expect(screen.queryByRole("region", { name: "Choose display name" })).not.toBeInTheDocument();
+  observer.disconnect();
+});
+
+test("Public Season view never shows display name gate for signed-in visitors", async () => {
+  const history = createMemoryHistory({ initialEntries: ["/p/FinalsFan"] });
+  const router = createAppRouter({ history });
+  const { authClient, profileClient } = createSignedInClients({ displayName: null });
+  const publicSeasonClient = createPublicSeasonClient({
+    players: {
+      FinalsFan: {
+        displayName: "FinalsFan",
+        isPublic: true,
+        entries: [
+          entryFixture({ id: "public-entry", rs: 33000, recordedAt: "2026-07-16T10:00:00.000Z" }),
+        ],
+      },
+    },
+  });
+
+  const gateSeen = { current: false };
+  const observer = new MutationObserver(() => {
+    if (document.querySelector('[aria-label="Choose display name"]') !== null) {
+      gateSeen.current = true;
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      authClient={authClient}
+      profileClient={profileClient}
+      publicSeasonClient={publicSeasonClient}
+    />,
+  );
+
+  expect(await screen.findByLabelText("Viewing")).toHaveTextContent("FinalsFan");
+  expect(gateSeen.current).toBe(false);
+  expect(screen.queryByRole("region", { name: "Choose display name" })).not.toBeInTheDocument();
+  observer.disconnect();
+});
+
 test("sync-ready sign-in uploads local-only Entries to cloud", async () => {
   const history = createMemoryHistory({ initialEntries: ["/"] });
   const router = createAppRouter({ history });

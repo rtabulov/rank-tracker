@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useRouterState } from "@tanstack/react-router";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,11 +11,15 @@ import { isProfileComplete } from "@/lib/profile";
 export function DisplayNameGate() {
   const { session, status: authStatus } = useAuth();
   const { profile, status: profileStatus, saveDisplayName } = useProfile();
+  const isPublicSeasonRoute = useRouterState({
+    select: (state) => state.location.pathname.startsWith("/p/"),
+  });
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   if (
+    isPublicSeasonRoute ||
     authStatus !== "ready" ||
     profileStatus !== "ready" ||
     session === null ||

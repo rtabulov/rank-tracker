@@ -19,6 +19,11 @@ type ProfileContextValue = {
 
 const ProfileContext = createContext<ProfileContextValue | null>(null);
 
+type LoadedProfile = {
+  userId: string;
+  profile: PlayerProfile | null;
+};
+
 export function ProfileProvider({
   children,
   profileClient,
@@ -27,30 +32,33 @@ export function ProfileProvider({
   profileClient: ProfileClient;
 }) {
   const { session } = useAuth();
-  const [profile, setProfile] = useState<PlayerProfile | null>(null);
-  const [status, setStatus] = useState<"idle" | "loading" | "ready">("idle");
+  const sessionUserId = session?.userId ?? null;
+  const [loaded, setLoaded] = useState<LoadedProfile | null>(null);
 
   useEffect(() => {
-    if (session === null) {
-      setProfile(null);
-      setStatus("ready");
+    if (sessionUserId === null) {
+      setLoaded(null);
       return;
     }
 
     let cancelled = false;
-    setStatus("loading");
-
-    void profileClient.getProfile(session.userId).then((next) => {
+    void profileClient.getProfile(sessionUserId).then((profile) => {
       if (!cancelled) {
-        setProfile(next);
-        setStatus("ready");
+        setLoaded({ userId: sessionUserId, profile });
       }
     });
 
     return () => {
       cancelled = true;
     };
-  }, [profileClient, session]);
+  }, [profileClient, sessionUserId]);
+
+  // Derive load status from the session, not a lagged effect flag — otherwise the
+  // first paint after auth restores a session still has status "ready" + null
+  // profile from the signed-out state and DisplayNameGate flashes.
+  const status: "idle" | "loading" | "ready" =
+    sessionUserId === null ? "ready" : loaded?.userId === sessionUserId ? "ready" : "loading";
+  const profile = loaded?.userId === sessionUserId ? loaded.profile : null;
 
   const saveDisplayName = async (displayName: string): Promise<SetDisplayNameResult> => {
     if (session === null) {
@@ -59,7 +67,7 @@ export function ProfileProvider({
 
     const result = await profileClient.setDisplayName(session.userId, displayName);
     if (result.ok) {
-      setProfile(result.profile);
+      setLoaded({ userId: session.userId, profile: result.profile });
     }
     return result;
   };
@@ -71,7 +79,7 @@ export function ProfileProvider({
 
     const result = await profileClient.setIsPublic(session.userId, isPublic);
     if (result.ok) {
-      setProfile(result.profile);
+      setLoaded({ userId: session.userId, profile: result.profile });
     }
     return result;
   };
