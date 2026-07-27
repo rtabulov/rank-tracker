@@ -9,7 +9,7 @@ function Bone({ className }: { className?: string }) {
   );
 }
 
-/** Season-view-shaped pending shell — global defaultPendingComponent. */
+/** Season-view-shaped pending shell — use only on routes that need it (e.g. public). */
 export function SeasonViewSkeleton({ showViewingStrip = false }: { showViewingStrip?: boolean }) {
   return (
     <main

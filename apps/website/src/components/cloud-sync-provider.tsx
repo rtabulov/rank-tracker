@@ -57,7 +57,7 @@ export function CloudSyncProvider({
   children: ReactNode;
   entriesClient: CloudEntriesClient;
 }) {
-  const { session } = useAuth();
+  const { session, status: authStatus } = useAuth();
   const { isCloudSyncAllowed } = useProfile();
   const { store, setStore, storageAdapter } = useLocalStore();
 
@@ -88,11 +88,16 @@ export function CloudSyncProvider({
   }, [store.entries, store.version]);
 
   useEffect(() => {
+    // Auth starts as session=null while status=loading; wiping sync bookkeeping
+    // here forced a full re-merge on every cold boot for signed-in players.
+    if (authStatus !== "ready") {
+      return;
+    }
     if (session === null) {
       saveSyncStateRef(createEmptySyncState());
       syncedEntriesRef.current = storeEntriesRef.current;
     }
-  }, [session, storageAdapter]);
+  }, [authStatus, session, storageAdapter]);
 
   useEffect(() => {
     if (!isCloudSyncAllowed || session === null) {

@@ -1,4 +1,12 @@
-import { createContext, useContext, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   LOCAL_STORE_KEY,
   createLocalStorageAdapter,
@@ -47,16 +55,26 @@ export function LocalStoreProvider({
   const storeRef = useRef(store);
   storeRef.current = store;
 
-  const value: LocalStoreContextValue = {
-    store,
-    getEntries: () => storeRef.current.entries,
-    setStore: (next: LocalStore) => {
+  const getEntries = useCallback(() => storeRef.current.entries, []);
+
+  const setStore = useCallback(
+    (next: LocalStore) => {
       storeRef.current = next;
       setStoreState(next);
       saveLocalStore(storageAdapter, next);
     },
-    storageAdapter,
-  };
+    [storageAdapter],
+  );
+
+  const value = useMemo(
+    () => ({
+      store,
+      getEntries,
+      setStore,
+      storageAdapter,
+    }),
+    [store, getEntries, setStore, storageAdapter],
+  );
 
   return <LocalStoreContext.Provider value={value}>{children}</LocalStoreContext.Provider>;
 }
