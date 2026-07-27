@@ -22,11 +22,19 @@ export function AuthProvider({
   useEffect(() => {
     let cancelled = false;
 
-    const unsubscribe = authClient.onAuthStateChange((next) => {
-      if (!cancelled) {
-        setSession(next);
-        setStatus("ready");
+    // Cold start: restore via getSession() (refreshes expired access tokens).
+    // Ignore INITIAL_SESSION(null) — supabase-js can emit that on a transient
+    // refresh error during _emitInitialSession even when tokens remain and
+    // getSession() still restores Sign-in.
+    const unsubscribe = authClient.onAuthStateChange((next, event) => {
+      if (cancelled) {
+        return;
       }
+      if (event === "INITIAL_SESSION" && next === null) {
+        return;
+      }
+      setSession(next);
+      setStatus("ready");
     });
 
     void authClient.getSession().then((next) => {

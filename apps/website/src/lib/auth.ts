@@ -11,7 +11,8 @@ export type OAuthProvider = "discord" | "google";
 
 export type AuthClient = {
   getSession: () => Promise<AuthSession | null>;
-  onAuthStateChange: (listener: (session: AuthSession | null) => void) => () => void;
+  /** `event` is the Supabase auth change name (e.g. INITIAL_SESSION, SIGNED_OUT). */
+  onAuthStateChange: (listener: (session: AuthSession | null, event: string) => void) => () => void;
   signInWithOAuth: (provider: OAuthProvider) => Promise<{ error: string | null }>;
   signInWithMagicLink: (email: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<{ error: string | null }>;
@@ -34,12 +35,12 @@ function toAuthSession(session: Session | null): AuthSession | null {
 
 export function createMemoryAuthClient(initialSession: AuthSession | null = null): AuthClient {
   let session = initialSession;
-  const listeners = new Set<(next: AuthSession | null) => void>();
+  const listeners = new Set<(next: AuthSession | null, event: string) => void>();
 
-  const emit = (next: AuthSession | null) => {
+  const emit = (next: AuthSession | null, event: string) => {
     session = next;
     for (const listener of listeners) {
-      listener(session);
+      listener(session, event);
     }
   };
 
@@ -60,7 +61,7 @@ export function createMemoryAuthClient(initialSession: AuthSession | null = null
       return { error: null };
     },
     signOut: async () => {
-      emit(null);
+      emit(null, "SIGNED_OUT");
       return { error: null };
     },
   };
@@ -75,15 +76,20 @@ export function createSupabaseAuthClient(
 
   return {
     getSession: async () => {
+      // getSession() refreshes when the access token is expired and a refresh
+      // token remains; that is the cold-start restore path for indefinite Sign-in.
       const { data, error } = await client.auth.getSession();
+      if (data.session) {
+        return toAuthSession(data.session);
+      }
       if (error) {
         return null;
       }
-      return toAuthSession(data.session);
+      return null;
     },
     onAuthStateChange: (listener) => {
-      const { data } = client.auth.onAuthStateChange((_event, session) => {
-        listener(toAuthSession(session));
+      const { data } = client.auth.onAuthStateChange((event, session) => {
+        listener(toAuthSession(session), event);
       });
       return () => {
         data.subscription.unsubscribe();

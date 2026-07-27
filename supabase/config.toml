@@ -273,11 +273,13 @@ max_frequency = "5s"
 # [auth.sms.test_otp]
 # 4152127777 = "123456"
 
-# Configure logged in session timeouts.
+# Session lifetime policy for Rank Tracker Sign-in (CONTEXT.md):
+# leave [auth.sessions] unset so there is no absolute timebox and no inactivity
+# timeout. JWT access tokens still expire per jwt_expiry above; the client
+# refreshes them. Only explicit Sign out (or Auth security invalidation) ends
+# Sign-in. Do not enable timebox / inactivity_timeout without changing product intent.
 # [auth.sessions]
-# Force log out after the specified duration.
 # timebox = "24h"
-# Force log out if the user has been inactive longer than the specified duration.
 # inactivity_timeout = "8h"
 
 # This hook runs before a new user is created and allows developers to reject the request based on the incoming user object.
