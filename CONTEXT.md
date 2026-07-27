@@ -60,6 +60,10 @@ _Avoid_: Restore, sync, upload, load, merge
 The person whose Rank Score history this Local store represents.
 _Avoid_: User, account holder, member
 
+**Sign-in**:
+Once established (OAuth or magic link), a Player's signed-in state survives browser restarts and arbitrarily long idle; only explicit Sign out ends it for normal use. Security-driven invalidation (revoked provider access, Auth terminating a compromised refresh token, and similar) may also end Sign-in.
+_Avoid_: Auth session, login session, persistent session, stay logged in
+
 **Display name**:
 The Player's chosen public handle, unique among signed-in Players; required before cloud sync. Format is URL-safe (letters, numbers, underscores, hyphens; length-bounded) and immutable once set.
 _Avoid_: Username, handle, nickname, gamertag
