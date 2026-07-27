@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
-import { useLocalStore } from "@/components/local-store-provider";
+import { useOptionalLocalStore } from "@/components/local-store-provider";
 import { DeleteEntryOverlay } from "@/components/delete-entry-overlay";
 import { EditEntryOverlay } from "@/components/edit-entry-overlay";
 import { LogRsOverlay } from "@/components/log-rs-overlay";
@@ -40,11 +40,17 @@ export function SeasonView({
   readOnly = false,
   onSeasonIntent,
 }: SeasonViewProps) {
-  const { store, setStore } = useLocalStore();
+  const localStore = useOptionalLocalStore();
+  if (entriesProp === undefined && localStore === null) {
+    throw new Error("SeasonView requires LocalStoreProvider when entries are not provided");
+  }
+  if (!readOnly && localStore === null) {
+    throw new Error("SeasonView requires LocalStoreProvider when not read-only");
+  }
   const [logRsOpen, setLogRsOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<Entry | null>(null);
   const [deletingEntry, setDeletingEntry] = useState<Entry | null>(null);
-  const entries = entriesProp ?? store.entries;
+  const entries = entriesProp ?? localStore!.store.entries;
   const season = getSeasonByNumber(seasonNumber) ?? getCurrentSeason();
   const seasonEntries =
     navigableSeasonsProp !== undefined ? entries : getEntriesForSeason(entries, season.number);
@@ -246,7 +252,10 @@ export function SeasonView({
             seasonNumber={season.number}
             onClose={() => setLogRsOpen(false)}
             onSaved={(entry) => {
-              setStore({ ...store, entries: addEntry(store.entries, entry) });
+              localStore!.setStore({
+                ...localStore!.store,
+                entries: addEntry(localStore!.store.entries, entry),
+              });
               const targetSeason = getSeasonForTimestamp(entry.recordedAt);
               if (targetSeason !== null && targetSeason.number !== season.number) {
                 onSeasonSelect(targetSeason.number);
@@ -260,7 +269,10 @@ export function SeasonView({
             seasonNumber={season.number}
             onClose={() => setEditingEntry(null)}
             onSaved={(entry) => {
-              setStore({ ...store, entries: updateEntry(store.entries, entry.id, entry) });
+              localStore!.setStore({
+                ...localStore!.store,
+                entries: updateEntry(localStore!.store.entries, entry.id, entry),
+              });
               const targetSeason = getSeasonForTimestamp(entry.recordedAt);
               if (targetSeason !== null && targetSeason.number !== season.number) {
                 onSeasonSelect(targetSeason.number);
@@ -283,7 +295,10 @@ export function SeasonView({
               if (deletingEntry === null) {
                 return;
               }
-              setStore({ ...store, entries: deleteEntry(store.entries, deletingEntry.id) });
+              localStore!.setStore({
+                ...localStore!.store,
+                entries: deleteEntry(localStore!.store.entries, deletingEntry.id),
+              });
               setDeletingEntry(null);
             }}
           />

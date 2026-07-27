@@ -33,6 +33,22 @@ function renderReadOnlySeasonView(props: {
   );
 }
 
+test("read-only Season view with provided Entries renders without LocalStoreProvider", async () => {
+  render(
+    <SeasonView
+      seasonNumber={11}
+      entries={[
+        entryFixture({ id: "visitor-entry", rs: 18090, recordedAt: "2026-07-18T08:43:00.000Z" }),
+      ]}
+      readOnly
+      onSeasonSelect={() => {}}
+    />,
+  );
+
+  expect(await screen.findByLabelText("Season hero")).toHaveTextContent("18,090");
+  expect(screen.queryByRole("button", { name: "Log RS" })).not.toBeInTheDocument();
+});
+
 test("read-only Season view renders provided Entries without Log RS, edit, or delete", async () => {
   renderReadOnlySeasonView({
     entries: [

@@ -61,8 +61,12 @@ export function LocalStoreProvider({
   return <LocalStoreContext.Provider value={value}>{children}</LocalStoreContext.Provider>;
 }
 
+export function useOptionalLocalStore(): LocalStoreContextValue | null {
+  return useContext(LocalStoreContext);
+}
+
 export function useLocalStore(): LocalStoreContextValue {
-  const context = useContext(LocalStoreContext);
+  const context = useOptionalLocalStore();
   if (context === null) {
     throw new Error("useLocalStore must be used within LocalStoreProvider");
   }
