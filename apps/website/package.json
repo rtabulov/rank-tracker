@@ -11,8 +11,8 @@
     "test": "vp test"
   },
   "dependencies": {
-    "@fontsource/jetbrains-mono": "catalog:",
-    "@fontsource/orbitron": "catalog:",
+    "@fontsource-variable/jetbrains-mono": "catalog:",
+    "@fontsource-variable/orbitron": "catalog:",
     "@supabase/supabase-js": "catalog:",
     "@t3-oss/env-core": "catalog:",
     "@tailwindcss/vite": "catalog:",

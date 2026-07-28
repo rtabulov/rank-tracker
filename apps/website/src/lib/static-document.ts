@@ -1,4 +1,7 @@
 import { SHELL_BACKGROUND_DARK, SHELL_BACKGROUND_LIGHT } from "@/lib/shell-chrome-colors";
+import type { AnyRouteMatch } from "@tanstack/react-router";
+import jetbrainsMonoUrl from "@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2?url";
+import orbitronUrl from "@fontsource-variable/orbitron/files/orbitron-latin-wght-normal.woff2?url";
 
 export const SITE_TITLE = "Rank Tracker";
 export const SITE_DESCRIPTION = "Personal Rank Score history for The Finals ranked play.";
@@ -34,9 +37,15 @@ export const THEME_BOOT_SCRIPT = `try {
   themeColorMeta.setAttribute("content", resolved === "dark" ? "${SHELL_BACKGROUND_DARK}" : "${SHELL_BACKGROUND_LIGHT}");
 } catch (_) {}`;
 
-export function staticDocumentHead() {
+export function staticDocumentHead(): {
+  links: NonNullable<AnyRouteMatch["links"]>;
+  scripts: NonNullable<AnyRouteMatch["headScripts"]>;
+  meta: NonNullable<AnyRouteMatch["meta"]>;
+  styles: NonNullable<AnyRouteMatch["styles"]>;
+} {
   return {
     meta: [
+      { title: SITE_TITLE },
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1.0" },
       { name: "description", content: SITE_DESCRIPTION },
@@ -60,9 +69,24 @@ export function staticDocumentHead() {
         media: "(prefers-color-scheme: dark)",
       },
     ],
-    links: [{ rel: "icon", type: "image/svg+xml", href: "/favicon.svg" }],
+    links: [
+      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+      {
+        rel: "preload",
+        as: "font",
+        type: "font/woff2",
+        href: jetbrainsMonoUrl,
+        crossOrigin: "anonymous",
+      },
+      {
+        rel: "preload",
+        as: "font",
+        type: "font/woff2",
+        href: orbitronUrl,
+        crossOrigin: "anonymous",
+      },
+    ],
     styles: [{ children: SHELL_CRITICAL_CSS }],
     scripts: [{ children: THEME_BOOT_SCRIPT }],
-    title: SITE_TITLE,
   };
 }

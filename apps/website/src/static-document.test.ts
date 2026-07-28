@@ -11,16 +11,17 @@ import {
   THEME_BOOT_SCRIPT,
   staticDocumentHead,
 } from "./lib/static-document.ts";
+import type { AnyRouteMatch } from "@tanstack/react-router";
 
 const websiteRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const ogImagePath = path.join(websiteRoot, "public/og.png");
 
 function metaValue(
-  meta: ReadonlyArray<Record<string, string | undefined>>,
-  key: "name" | "property",
+  meta: NonNullable<AnyRouteMatch["meta"]>,
+  key: "name" | "property" | "title",
   value: string,
 ): string | undefined {
-  return meta.find((entry) => entry[key] === value)?.content;
+  return meta.find((entry) => entry?.[key] === value)?.content;
 }
 
 test("static document exposes theme-color metas aligned with the shell palette", () => {
@@ -30,17 +31,17 @@ test("static document exposes theme-color metas aligned with the shell palette",
   expect(
     meta.find(
       (entry) =>
-        entry.name === "theme-color" &&
-        entry.media === "(prefers-color-scheme: light)" &&
-        entry.content === "#f4f4f8",
+        entry?.name === "theme-color" &&
+        entry?.media === "(prefers-color-scheme: light)" &&
+        entry?.content === "#f4f4f8",
     ),
   ).toBeDefined();
   expect(
     meta.find(
       (entry) =>
-        entry.name === "theme-color" &&
-        entry.media === "(prefers-color-scheme: dark)" &&
-        entry.content === "#0a0a0f",
+        entry?.name === "theme-color" &&
+        entry?.media === "(prefers-color-scheme: dark)" &&
+        entry?.content === "#0a0a0f",
     ),
   ).toBeDefined();
 });
@@ -59,7 +60,9 @@ test("static document ships critical shell background CSS for first paint", () =
 });
 
 test("static document exposes the Rank Tracker title for crawlers", () => {
-  expect(staticDocumentHead().title).toBe(SITE_TITLE);
+  const { meta } = staticDocumentHead();
+
+  expect(meta.find((entry) => entry?.title === SITE_TITLE)).toBeDefined();
 });
 
 test("static document exposes the product pitch in plain description meta", () => {
@@ -96,9 +99,9 @@ test("static document ships a non-empty og.png preview asset at the public path"
 });
 
 test("static document preview fields omit personal Entry or Season data", () => {
-  const { meta, title } = staticDocumentHead();
+  const { meta } = staticDocumentHead();
   const previewFields = [
-    title,
+    metaValue(meta, "title", SITE_TITLE),
     metaValue(meta, "name", "description"),
     metaValue(meta, "property", "og:title"),
     metaValue(meta, "property", "og:description"),

@@ -8,6 +8,8 @@ catalogMode: prefer
 catalog:
   "@ai-hero/sandcastle": ^0.12.0
   '@cloudflare/vite-plugin': ^1.47.0
+  '@fontsource-variable/jetbrains-mono': ^5.3.0
+  '@fontsource-variable/orbitron': ^5.3.0
   "@fontsource/jetbrains-mono": ^5.2.8
   "@fontsource/orbitron": ^5.2.8
   '@supabase/supabase-js': ^2.110.7

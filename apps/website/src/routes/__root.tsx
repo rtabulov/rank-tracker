@@ -25,7 +25,7 @@ export const Route = createRootRouteWithContext<AppRouterContext>()({
   // selective child SSR (Public Season) can emit first-paint HTML. Owner `/`
   // stays `ssr: false` via defaultSsr + route override.
   ssr: true,
-  head: () => staticDocumentHead(),
+  head: staticDocumentHead,
   component: RootComponent,
   notFoundComponent: NotFoundPage,
 });
