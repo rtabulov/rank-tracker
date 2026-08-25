@@ -209,13 +209,13 @@
       "source": "tanstack-skills/tanstack-skills",
       "sourceType": "github",
       "skillPath": "plugins/tanstack-start/skills/tanstack-start/SKILL.md",
-      "computedHash": "e9d8355fe3e47b118e739081f1123c52aa0ecde57da840722177e1ad5caf9908"
+      "computedHash": "31690f8eb3a24feb093bfd14d673f0519078cdcd297f79fc2bbb584b4daa4db1"
     },
     "tanstack-virtual": {
       "source": "tanstack-skills/tanstack-skills",
       "sourceType": "github",
       "skillPath": "plugins/tanstack-virtual/skills/tanstack-virtual/SKILL.md",
-      "computedHash": "987d0fcffeac700cea1303a13a9cecd8a4583985dd675f97ebbca27bfa592b47"
+      "computedHash": "3696d2db04a03373dfdab1f8d5c2249989c6d8c299bb02c4491b25d2b446e51c"
     },
     "taste-design": {
       "source": "google-labs-code/stitch-skills",
