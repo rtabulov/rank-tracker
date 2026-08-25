@@ -185,25 +185,25 @@
       "source": "supabase/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/supabase-postgres-best-practices/SKILL.md",
-      "computedHash": "ec56a54fba0e97bee52c7f244ba603bb284bf8d1b739c66a5cc84ec3df709d9d"
+      "computedHash": "128fac78002d916c8ca908245d398e634f540d8bcf20915b2b2359aeb18eba59"
     },
     "tanstack-devtools": {
       "source": "tanstack-skills/tanstack-skills",
       "sourceType": "github",
       "skillPath": "plugins/tanstack-devtools/skills/tanstack-devtools/SKILL.md",
-      "computedHash": "ecb51f9902ae6de9f512b299e6c16bd4befc3ff2c62f8cd1ece07e31b1c73dfe"
+      "computedHash": "f850227276d30e43e07e3e0d2e711d3b2ef72f93abb5f1df7796e2d5e06b0b77"
     },
     "tanstack-form": {
       "source": "tanstack-skills/tanstack-skills",
       "sourceType": "github",
       "skillPath": "plugins/tanstack-form/skills/tanstack-form/SKILL.md",
-      "computedHash": "1eb9f9fc43ab2777f586f916b2234c5340ed98f296a98b22c75cbbafcbd29b86"
+      "computedHash": "6d00fa22960ef5c45d14906f8f05d91870de658effb8c76bacc69d60a1000098"
     },
     "tanstack-query": {
       "source": "tanstack-skills/tanstack-skills",
       "sourceType": "github",
       "skillPath": "plugins/tanstack-query/skills/tanstack-query/SKILL.md",
-      "computedHash": "b8a0477cd4d7bf8fa54d27f8e64d82388402f0d502591db50a357df5b9995c75"
+      "computedHash": "bfe2977e92667b84efeb4b12e5c3010807934aab2f7ac2b059241cd3da2a3e6e"
     },
     "tanstack-start": {
       "source": "tanstack-skills/tanstack-skills",
