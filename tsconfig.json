@@ -16,5 +16,5 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true
   },
-  "include": [".sandcastle/**/*.ts", "vite.config.ts"]
+  "include": [".sandcastle/**/*.ts", "prototypes/**/*.ts", "vite.config.ts"]
 }
