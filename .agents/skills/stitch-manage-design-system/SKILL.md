@@ -82,7 +82,6 @@ design system in Stitch.
      This returns the `sourceScreen` ID and the `screenInstance` ID.
 
    - **Option B (Direct MCP Tool)**: If the `DESIGN.md` is small (under ~5KB), you can call the `upload_design_md` MCP tool directly, passing the base64-encoded design markdown content as `designMdBase64`.
-
 2. **Create Design System**: Call the `create_design_system_from_design_md` tool immediately after the upload, passing the `projectId` and the `selectedScreenInstance` (containing the `id` and `sourceScreen` returned from the upload step).
 
 Once the upload script and `create_design_system_from_design_md` have both completed,

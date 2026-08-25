@@ -222,7 +222,7 @@ export function LoginForm() {
 | Drawer    | Sheet         | Very similar           |
 | Box       | div           | Use Tailwind classes   |
 | Flex      | div           | Use flex utilities     |
-| Stack     | div           | Use space-y-\* classes |
+| Stack     | div           | Use space-y-* classes  |
 | Text      | p/span        | Use typography classes |
 | Heading   | h1/h2/etc     | Use typography classes |
 | useToast  | useToast      | Different API          |
