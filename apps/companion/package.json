@@ -1,0 +1,25 @@
+{
+  "name": "companion",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:vite": "vp dev",
+    "build:vite": "pnpm exec tsc && vp build",
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "check": "tsc && vp check",
+    "test": "vp test"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.9.1",
+    "companion-lifecycle": "workspace:*"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.9.6",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}

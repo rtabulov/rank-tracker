@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-quit"
+description = "Allows the frontend to quit the companion process"
+commands.allow = ["quit"]

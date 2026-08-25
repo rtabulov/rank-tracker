@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rank Tracker Companion</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: "Segoe UI", system-ui, sans-serif;
+        background: #0a0a0f;
+        color: #f4f4f8;
+      }
+      body {
+        margin: 0;
+        padding: 1rem;
+      }
+      h1 {
+        font-size: 1rem;
+        margin: 0 0 0.5rem;
+      }
+      .meta {
+        color: #9ca3af;
+        font-size: 0.85rem;
+        margin-bottom: 1rem;
+      }
+      .balloon {
+        border: 1px solid #333;
+        border-radius: 8px;
+        padding: 0.75rem;
+        margin-bottom: 1rem;
+      }
+      .actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      button {
+        text-align: left;
+        padding: 0.5rem 0.75rem;
+        border-radius: 6px;
+        border: 1px solid #444;
+        background: #15151f;
+        color: inherit;
+        cursor: pointer;
+      }
+      button:hover {
+        border-color: #6ee7ff;
+      }
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="dev-panel" class="hidden">
+      <h1>Rank Tracker Companion (dev panel)</h1>
+      <p class="meta">
+        Tray mode uses <code>pnpm dev</code> (Tauri). This panel mirrors tray state in the browser.
+      </p>
+      <div class="balloon">
+        <strong id="balloon-title"></strong>
+        <p id="balloon-body"></p>
+      </div>
+      <div id="actions" class="actions"></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

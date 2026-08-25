@@ -1,0 +1,25 @@
+import { isTauri } from "@tauri-apps/api/core";
+import { bindDevPanelActions, renderDevPanel } from "./dev-panel.ts";
+import { dispatchMenuId } from "./store.ts";
+import { initTray } from "./tray.ts";
+
+async function bootstrap(): Promise<void> {
+  if (isTauri()) {
+    try {
+      await initTray();
+      // Hidden shell window — UI is the system tray only.
+      document.body.innerHTML = "";
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      document.body.innerHTML = `<pre style="font-family:system-ui;padding:1rem;color:#f87171">Tray init failed:\n${message}</pre>`;
+    }
+    return;
+  }
+
+  renderDevPanel(document.body);
+  bindDevPanelActions((id) => {
+    dispatchMenuId(id);
+  });
+}
+
+void bootstrap();
