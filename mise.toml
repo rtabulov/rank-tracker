@@ -2,4 +2,4 @@
 node = "26"
 pnpm = "latest"
 rust = "latest"
-vp = "latest"
+vp = "0.2.6"
