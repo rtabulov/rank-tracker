@@ -1,0 +1,10 @@
+[[permission]]
+identifier = "allow-capture"
+description = "Start/stop tshark capture, list interfaces, probe key log"
+commands.allow = [
+  "list_capture_interfaces",
+  "start_capture_cmd",
+  "stop_capture_cmd",
+  "save_capture_interface",
+  "probe_keylog_status",
+]

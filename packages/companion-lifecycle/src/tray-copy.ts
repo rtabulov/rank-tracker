@@ -53,12 +53,17 @@ export function trayBalloon(state: CompanionState): TrayBalloon {
     case "ready":
       return {
         title: readyToCapture(state) ? "Ready to capture" : "Almost ready",
-        body: readyToCapture(state)
-          ? "Right-click → Start capture"
-          : "Finish the checklist, then Start capture.",
+        body:
+          state.errorDetail ??
+          (readyToCapture(state)
+            ? "Right-click → Start capture"
+            : "Finish the checklist, then Start capture."),
       };
     case "waiting_for_game":
-      return { title: "Waiting…", body: "Launch THE FINALS (Career → Leagues loads RS)." };
+      return {
+        title: "Waiting…",
+        body: state.errorDetail ?? "Launch THE FINALS (Career → Leagues loads RS).",
+      };
     case "capturing":
       return { title: "Capturing", body: "Listening for league-rank rankScore…" };
     case "rs_ready":
@@ -175,6 +180,7 @@ export function actionLabel(actionType: string): string {
     ENTRY_SAVED: "Entry saved",
     DISMISS_PROPOSAL: "Dismiss",
     PICK_INTERFACE_OK: "Adapter selected",
+    NEED_INTERFACE: "Pick adapter",
     RETRY: "Retry",
     RESET: "Reset to consent",
   };

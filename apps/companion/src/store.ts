@@ -54,6 +54,7 @@ export function actionFromMenuId(id: string): Action | null {
     case "ENTRY_SAVED":
     case "DISMISS_PROPOSAL":
     case "PICK_INTERFACE_OK":
+    case "NEED_INTERFACE":
     case "RETRY":
     case "RESET":
       return { type: id };

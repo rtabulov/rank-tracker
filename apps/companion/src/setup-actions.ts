@@ -5,6 +5,7 @@ import {
   type CompanionState,
   type NpcapProbeFacts,
 } from "companion-lifecycle";
+import { handleCaptureMenuId } from "./capture-actions.ts";
 import { dispatch, dispatchMenuId } from "./store.ts";
 
 let npcapPollTimer: ReturnType<typeof setInterval> | null = null;
@@ -49,6 +50,15 @@ function startNpcapPoll(): void {
  * Tray/dev-panel menu handler: OS side effects + lifecycle dispatch.
  */
 export async function handleSetupMenuId(id: string): Promise<CompanionState | null> {
+  if (
+    id === "START_CAPTURE" ||
+    id === "RETRY" ||
+    id === "PICK_INTERFACE_OK" ||
+    id === "NEED_INTERFACE"
+  ) {
+    return handleCaptureMenuId(id);
+  }
+
   switch (id) {
     case "MSI_OK": {
       if (isTauri()) {
@@ -105,8 +115,13 @@ export async function handleSetupMenuId(id: string): Promise<CompanionState | nu
     }
     case "RESET": {
       stopNpcapPoll();
+      await handleCaptureMenuId("RESET");
       return dispatchMenuId(id);
     }
+    case "DISMISS_PROPOSAL":
+    case "ENTRY_SAVED":
+      await handleCaptureMenuId(id);
+      return dispatchMenuId(id);
     default:
       return dispatchMenuId(id);
   }

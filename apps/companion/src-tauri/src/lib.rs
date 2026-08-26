@@ -1,3 +1,5 @@
+mod capture;
+
 use serde::Serialize;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -6,7 +8,7 @@ use tauri::{
   include_image,
   menu::{Menu, MenuItem},
   tray::TrayIconBuilder,
-  AppHandle, WindowEvent,
+  AppHandle, Manager, WindowEvent,
 };
 
 const TRAY_ID: &str = "main";
@@ -23,7 +25,8 @@ struct NpcapProbeFacts {
 }
 
 #[tauri::command]
-fn quit(app: AppHandle) {
+fn quit(app: AppHandle, host: tauri::State<'_, capture::CaptureHost>) {
+  capture::stop_capture(&app, &host);
   app.exit(0);
 }
 
@@ -237,12 +240,18 @@ fn tighten_keylog_acl(dir: &Path) -> Result<(), String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
+    .manage(capture::CaptureHost::new())
     .invoke_handler(tauri::generate_handler![
       quit,
       open_npcap_download,
       detect_npcap,
       clear_npcap_reboot_marker,
-      apply_ssl_keylog
+      apply_ssl_keylog,
+      capture::list_capture_interfaces,
+      capture::start_capture_cmd,
+      capture::stop_capture_cmd,
+      capture::save_capture_interface,
+      capture::probe_keylog_status,
     ])
     .on_window_event(|window, event| {
       if let WindowEvent::CloseRequested { api, .. } = event {
@@ -277,6 +286,9 @@ pub fn run() {
         .show_menu_on_left_click(true)
         .on_menu_event(|app, event| {
           if event.id().as_ref() == "QUIT" {
+            if let Some(host) = app.try_state::<capture::CaptureHost>() {
+              capture::stop_capture(app, &host);
+            }
             app.exit(0);
           }
         })

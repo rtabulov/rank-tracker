@@ -86,6 +86,29 @@ describe("capture phases", () => {
     expect(state.lastRs).toBe(25_644);
   });
 
+  test("RS captured while waiting_for_game still reaches rs_ready", () => {
+    let state = throughReady();
+    state = reduce(state, { type: "START_CAPTURE" });
+    state = reduce(state, { type: "RS_CAPTURED", rs: 25_644 });
+    expect(state.phase).toBe("rs_ready");
+    expect(state.lastRs).toBe(25_644);
+  });
+
+  test("NEED_INTERFACE from waiting_for_game opens error_interface", () => {
+    let state = throughReady();
+    state = reduce(state, { type: "START_CAPTURE" });
+    state = reduce(state, { type: "NEED_INTERFACE" });
+    expect(state.phase).toBe("error_interface");
+  });
+
+  test("GAME_LOST from waiting_for_game returns to ready with Leagues hint", () => {
+    let state = throughReady();
+    state = reduce(state, { type: "START_CAPTURE" });
+    state = reduce(state, { type: "GAME_LOST" });
+    expect(state.phase).toBe("ready");
+    expect(state.errorDetail).toMatch(/Leagues/i);
+  });
+
   test("PWA connected then entry saved reaches idle", () => {
     let state = throughReady();
     state = reduce(state, { type: "START_CAPTURE" });

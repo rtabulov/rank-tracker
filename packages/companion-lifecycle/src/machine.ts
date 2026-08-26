@@ -43,6 +43,7 @@ export type Action =
   | { type: "ENTRY_SAVED" }
   | { type: "DISMISS_PROPOSAL" }
   | { type: "PICK_INTERFACE_OK" }
+  | { type: "NEED_INTERFACE" }
   | { type: "RETRY" }
   | { type: "RESET" };
 
@@ -262,11 +263,33 @@ export function reduce(state: CompanionState, action: Action): CompanionState {
       if (action.type === "GAME_DETECTED") {
         return { ...state, phase: "capturing" };
       }
+      if (action.type === "RS_CAPTURED") {
+        return {
+          ...state,
+          phase: "rs_ready",
+          lastRs: action.rs,
+          errorDetail: null,
+        };
+      }
       if (action.type === "RETRY") {
         return {
           ...state,
           phase: "error_keylog",
           errorDetail: "No SSLKEYLOGFILE lines after timeout — relaunch game after env set?",
+        };
+      }
+      if (action.type === "GAME_LOST") {
+        return {
+          ...state,
+          phase: "ready",
+          errorDetail: "No game discovery traffic — launch THE FINALS and open Career → Leagues",
+        };
+      }
+      if (action.type === "NEED_INTERFACE") {
+        return {
+          ...state,
+          phase: "error_interface",
+          errorDetail: "No packets on selected adapter — pick interface",
         };
       }
       break;
@@ -282,7 +305,7 @@ export function reduce(state: CompanionState, action: Action): CompanionState {
       if (action.type === "GAME_LOST") {
         return { ...state, phase: "waiting_for_game" };
       }
-      if (action.type === "RETRY") {
+      if (action.type === "RETRY" || action.type === "NEED_INTERFACE") {
         return {
           ...state,
           phase: "error_interface",
@@ -366,9 +389,9 @@ export function legalActions(phase: Phase): Action["type"][] {
     case "ready":
       return ["START_CAPTURE"];
     case "waiting_for_game":
-      return ["GAME_DETECTED", "RETRY"];
+      return ["GAME_DETECTED", "RS_CAPTURED", "RETRY", "GAME_LOST", "NEED_INTERFACE"];
     case "capturing":
-      return ["RS_CAPTURED", "GAME_LOST", "RETRY"];
+      return ["RS_CAPTURED", "GAME_LOST", "RETRY", "NEED_INTERFACE"];
     case "rs_ready":
       return ["PWA_CONNECTED", "DISMISS_PROPOSAL"];
     case "awaiting_pwa_save":
