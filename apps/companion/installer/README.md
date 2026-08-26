@@ -1,27 +1,38 @@
-# WiX Burn → Tauri MSI (companion #113)
+# Tauri MSI installer (companion #113)
+
+**Ship vehicle:** Tauri WiX MSI only. WiX Burn is **wontfix** for private beta (`burn/Bundle.wxs` is historical stub only).
 
 ## Layout
 
-| Path                                             | Role                                                                                 |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------ |
-| `../src-tauri/`                                  | Tauri app; `tauri build` produces the inner **WiX MSI** (`bundle.targets: msi`)      |
-| `../src-tauri/resources/tshark/`                 | Bundled `tshark` payload (gitignored binaries; see README there)                     |
-| `../src-tauri/resources/THIRD_PARTY_NOTICES.txt` | GPL / third-party placeholder                                                        |
-| `sslkeylog-setup.ps1`                            | Per-user `SSLKEYLOGFILE` + key-log dir ACL helper (MSI custom action / post-install) |
-| `burn/Bundle.wxs`                                | WiX Burn bootstrapper stub wrapping the Tauri MSI                                    |
+| Path                                             | Role                                                                        |
+| ------------------------------------------------ | --------------------------------------------------------------------------- |
+| `../src-tauri/`                                  | Tauri app; `tauri build` → MSI (`bundle.targets: msi`)                      |
+| `../src-tauri/resources/tshark/`                 | Bundled `tshark` payload (gitignored; stage via `fetch-tshark-payload.ps1`) |
+| `../src-tauri/resources/sslkeylog-setup.ps1`     | Bundled; MSI runs this after InstallFiles (per-user SSLKEYLOGFILE + ACL)    |
+| `../src-tauri/resources/THIRD_PARTY_NOTICES.txt` | GPL / third-party placeholder                                               |
+| `../src-tauri/windows/fragments/sslkeylog.wxs`   | WiX custom action wiring                                                    |
+| `fetch-tshark-payload.ps1`                       | Copy pinned tshark CLI stack from an installed Wireshark                    |
 
 ## Player flow (Variant C)
 
-1. Burn/MSI elevates (UAC) and installs companion + `tshark` machine-wide.
-2. Custom action / first-run `apply_ssl_keylog` writes per-user env + ACLs (no manual `setx`).
-3. Tray checklist: open official Npcap download (not bundled) → detect → optional reboot if installer signaled 3010 → Steam+game restart (either order with Npcap).
+1. MSI elevates (UAC) and installs companion + `tshark` machine-wide.
+2. MSI custom action runs `resources\sslkeylog-setup.ps1` (impersonated) → per-user `SSLKEYLOGFILE` + key-log ACL.
+3. Tray checklist: open official Npcap download (not bundled) → detect → optional reboot if driver not ready (3010-style) → Steam+game restart (either order with Npcap).
 4. `readyToCapture` when `sslKeyLogPrepared && npcapPresent && (!rebootRequired || rebootDone) && gameRestartedAfterEnv`.
 
-## Build notes
+## tshark payload (Option A)
 
-- Dev: `vp run companion#dev` — tray **MSI / SSLKEYLOG ready** calls `apply_ssl_keylog` in user scope (fails → MSI_FAIL; does not fake `sslKeyLogPrepared`).
-- Release MSI: `pnpm --dir apps/companion build` (requires WiX + pinned `tshark` payload). Wire `sslkeylog-setup.ps1` as a WiX custom action so install (not only tray) writes the env.
-- Burn: stub only until MSI path + tshark payload are filled; compile `burn/Bundle.wxs` with the WiX toolset.
-- Npcap reboot (exit 3010): MSI/Burn should drop a marker the tray reads; cold `detect_npcap` cannot infer 3010 from DLLs alone.
+Binaries are **not** committed. Stage them locally before `tauri build`:
 
-Npcap is never bundled. Official download: https://npcap.com/#download
+```powershell
+powershell -ExecutionPolicy Bypass -File apps/companion/installer/fetch-tshark-payload.ps1
+pnpm --dir apps/companion build
+```
+
+Pinned target version: **4.6.8**. Npcap installers are excluded from the payload on purpose.
+
+## Npcap reboot marker
+
+If DLLs are present but the `npcap` service will not run, the companion writes
+`%LOCALAPPDATA%\RankTrackerCompanion\npcap-reboot-required` and the tray shows the reboot prompt.
+**Reboot done** clears the marker and re-probes.

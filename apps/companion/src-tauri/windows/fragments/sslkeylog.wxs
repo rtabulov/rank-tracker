@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Per-user SSLKEYLOGFILE after MSI InstallFiles (#113).
+  Runs impersonated so HKCU / %LOCALAPPDATA% belong to the installing user.
+-->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Fragment>
+    <DirectoryRef Id="INSTALLDIR">
+      <Component Id="SslKeyLogSetupMarker" Guid="A3C91E2B-7D44-4F1A-9B6E-CompanionSslKey01" Win64="yes">
+        <RegistryValue
+          Root="HKCU"
+          Key="Software\ranktracker\Rank Tracker Companion"
+          Name="SslKeyLogSetupScheduled"
+          Type="integer"
+          Value="1"
+          KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+  </Fragment>
+
+  <Fragment>
+    <CustomAction
+      Id="ApplySslKeyLogUserEnv"
+      Directory="INSTALLDIR"
+      ExeCommand="powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File &quot;[INSTALLDIR]resources\sslkeylog-setup.ps1&quot;"
+      Execute="immediate"
+      Impersonate="yes"
+      Return="ignore" />
+
+    <InstallExecuteSequence>
+      <Custom Action="ApplySslKeyLogUserEnv" After="InstallFiles">NOT REMOVE</Custom>
+    </InstallExecuteSequence>
+  </Fragment>
+</Wix>

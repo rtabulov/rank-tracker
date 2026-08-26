@@ -13,6 +13,7 @@ const TRAY_ID: &str = "main";
 const TRAY_ICON: tauri::image::Image<'_> = include_image!("./icons/32x32.png");
 const SSLKEYLOGFILE_ENV: &str = "SSLKEYLOGFILE";
 const NPCAP_DOWNLOAD_URL: &str = "https://npcap.com/#download";
+const NPCAP_REBOOT_MARKER: &str = "npcap-reboot-required";
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -33,11 +34,34 @@ fn open_npcap_download() -> Result<(), String> {
 
 #[tauri::command]
 fn detect_npcap() -> NpcapProbeFacts {
-  NpcapProbeFacts {
-    present: npcap_dll_present(),
-    // Installer exit 3010 is tracked by the elevated MSI path, not a cold probe.
-    reboot_required: false,
+  let present = npcap_dll_present();
+  if !present {
+    let _ = clear_npcap_reboot_marker_file();
+    return NpcapProbeFacts {
+      present: false,
+      reboot_required: false,
+    };
   }
+
+  if npcap_driver_ready() {
+    let _ = clear_npcap_reboot_marker_file();
+    return NpcapProbeFacts {
+      present: true,
+      reboot_required: false,
+    };
+  }
+
+  // DLLs on disk but driver/service not usable — Npcap exit 3010 / reboot-pending.
+  let _ = write_npcap_reboot_marker();
+  NpcapProbeFacts {
+    present: true,
+    reboot_required: true,
+  }
+}
+
+#[tauri::command]
+fn clear_npcap_reboot_marker() -> Result<(), String> {
+  clear_npcap_reboot_marker_file()
 }
 
 #[tauri::command]
@@ -73,7 +97,7 @@ fn npcap_dll_present() -> bool {
   {
     let candidates = [
       Path::new(r"C:\Windows\System32\Npcap\wpcap.dll"),
-      Path::new(r"C:\Windows\System32\Npcap\Npcap.dll"),
+      Path::new(r"C:\Windows\System32\Npcap\npcap.dll"),
       Path::new(r"C:\Windows\System32\wpcap.dll"),
     ];
     return candidates.iter().any(|p| p.exists());
@@ -82,6 +106,73 @@ fn npcap_dll_present() -> bool {
   {
     false
   }
+}
+
+fn npcap_driver_ready() -> bool {
+  #[cfg(windows)]
+  {
+    if npcap_service_running() {
+      return true;
+    }
+    // Fresh installs sometimes need an explicit start before reboot-required is clear.
+    let _ = Command::new("sc").args(["start", "npcap"]).status();
+    return npcap_service_running();
+  }
+  #[cfg(not(windows))]
+  {
+    false
+  }
+}
+
+fn npcap_service_running() -> bool {
+  #[cfg(windows)]
+  {
+    let output = Command::new("sc").args(["query", "npcap"]).output();
+    match output {
+      Ok(out) => {
+        let text = String::from_utf8_lossy(&out.stdout).to_ascii_uppercase();
+        text.contains("RUNNING")
+      }
+      Err(_) => false,
+    }
+  }
+  #[cfg(not(windows))]
+  {
+    false
+  }
+}
+
+fn companion_data_dir() -> Result<PathBuf, String> {
+  let base = std::env::var("LOCALAPPDATA")
+    .or_else(|_| {
+      std::env::var("USERPROFILE").map(|p| {
+        PathBuf::from(p)
+          .join("AppData")
+          .join("Local")
+          .to_string_lossy()
+          .into_owned()
+      })
+    })
+    .map_err(|_| "LOCALAPPDATA/USERPROFILE not set".to_string())?;
+  Ok(PathBuf::from(base).join("RankTrackerCompanion"))
+}
+
+fn npcap_reboot_marker_path() -> Result<PathBuf, String> {
+  Ok(companion_data_dir()?.join(NPCAP_REBOOT_MARKER))
+}
+
+fn write_npcap_reboot_marker() -> Result<(), String> {
+  let dir = companion_data_dir()?;
+  fs::create_dir_all(&dir).map_err(|e| format!("create companion data dir: {e}"))?;
+  fs::write(npcap_reboot_marker_path()?, b"1").map_err(|e| format!("write reboot marker: {e}"))
+}
+
+fn clear_npcap_reboot_marker_file() -> Result<(), String> {
+  let path = npcap_reboot_marker_path()?;
+  if path.exists() {
+    fs::remove_file(&path).map_err(|e| format!("remove reboot marker: {e}"))?;
+  }
+  Ok(())
 }
 
 fn ssl_keylog_file_path() -> Result<PathBuf, String> {
@@ -132,7 +223,6 @@ fn tighten_keylog_acl(dir: &Path) -> Result<(), String> {
       .status()
       .map_err(|e| format!("icacls: {e}"))?;
     if !status.success() {
-      // Non-fatal for local/dev if ACL tools are restricted; env + dir still apply.
       log::warn!("icacls exited with {status}; key-log dir created without tightened ACL");
     }
     return Ok(());
@@ -151,6 +241,7 @@ pub fn run() {
       quit,
       open_npcap_download,
       detect_npcap,
+      clear_npcap_reboot_marker,
       apply_ssl_keylog
     ])
     .on_window_event(|window, event| {
@@ -166,6 +257,14 @@ pub fn run() {
             .level(log::LevelFilter::Info)
             .build(),
         )?;
+      }
+
+      // MSI custom action should have set SSLKEYLOGFILE; repair if missing (e.g. older install).
+      if std::env::var(SSLKEYLOGFILE_ENV).unwrap_or_default().is_empty() {
+        match apply_ssl_keylog() {
+          Ok(path) => log::info!("SSLKEYLOGFILE repaired at {path}"),
+          Err(err) => log::warn!("SSLKEYLOGFILE repair skipped: {err}"),
+        }
       }
 
       let status = MenuItem::with_id(app, "status", "Rank Tracker Companion", false, None::<&str>)?;

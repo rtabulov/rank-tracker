@@ -1,4 +1,9 @@
 [[permission]]
 identifier = "allow-setup"
 description = "Npcap detect, SSLKEYLOGFILE apply, and open download URL"
-commands.allow = ["open_npcap_download", "detect_npcap", "apply_ssl_keylog"]
+commands.allow = [
+  "open_npcap_download",
+  "detect_npcap",
+  "clear_npcap_reboot_marker",
+  "apply_ssl_keylog",
+]

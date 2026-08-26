@@ -88,6 +88,21 @@ export async function handleSetupMenuId(id: string): Promise<CompanionState | nu
       }
       return dispatchMenuId(id);
     }
+    case "REBOOT_DONE": {
+      if (isTauri()) {
+        try {
+          await invoke("clear_npcap_reboot_marker");
+        } catch {
+          // Still advance lifecycle; next detect will re-probe the service.
+        }
+        const facts = await probeNpcap();
+        if (facts.present && facts.rebootRequired) {
+          // Driver still not ready after claimed reboot — stay on reboot prompt via DETECT.
+          return dispatch(interpretNpcapProbe(facts, "post_install"));
+        }
+      }
+      return dispatchMenuId(id);
+    }
     case "RESET": {
       stopNpcapPoll();
       return dispatchMenuId(id);

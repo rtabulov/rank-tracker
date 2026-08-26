@@ -1,13 +1,10 @@
-# tshark payload (not committed)
+# tshark payload (gitignored binaries)
 
-Place a pinned `tshark` Windows distribution here for MSI bundling:
+Stage before MSI build (from repo root):
 
-```
-resources/tshark/
-  tshark.exe
-  (required DLLs / data files from the Wireshark CLI stack)
+```powershell
+powershell -ExecutionPolicy Bypass -File apps/companion/installer/fetch-tshark-payload.ps1
 ```
 
-Do not commit binaries to git. CI or a maintainer drop copies them before
-`tauri build` / Burn. Update `THIRD_PARTY_NOTICES.txt` with the exact version
-and source-offer details when the payload is pinned.
+Uses an installed Wireshark (default `C:\Program Files\Wireshark`), pin **4.6.8**.
+Npcap installers are not copied. See `installer/README.md`.

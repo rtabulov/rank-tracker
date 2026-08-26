@@ -35,10 +35,16 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": ["resources/THIRD_PARTY_NOTICES.txt", "resources/tshark"],
+    "resources": [
+      "resources/THIRD_PARTY_NOTICES.txt",
+      "resources/tshark",
+      "resources/sslkeylog-setup.ps1"
+    ],
     "windows": {
       "wix": {
-        "language": "en-US"
+        "language": "en-US",
+        "fragmentPaths": ["./windows/fragments/sslkeylog.wxs"],
+        "componentRefs": ["SslKeyLogSetupMarker"]
       }
     }
   }

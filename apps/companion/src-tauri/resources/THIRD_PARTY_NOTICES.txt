@@ -7,7 +7,8 @@ stable release. See GitHub issue #113 / parent spec #111.
 Bundled capture tooling (planned install-dir layout)
 ----------------------------------------------------
 - `tshark` and required DLLs/data files under the companion install directory
-  (e.g. `tshark/`). Exact file list is filled when the payload is pinned.
+  (`resources/tshark/`, staged via `installer/fetch-tshark-payload.ps1`).
+- Current pin: Wireshark/TShark **4.6.8** (see `PAYLOAD_VERSION.txt` after staging).
 - Licence: Wireshark / tshark are GPL-2.0-or-later. Redistribution requires
   corresponding source (or a written offer) and retention of copyright notices.
   Reference: https://www.wireshark.org/about.html
