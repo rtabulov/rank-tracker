@@ -6,7 +6,7 @@
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
   <Fragment>
     <DirectoryRef Id="INSTALLDIR">
-      <Component Id="SslKeyLogSetupMarker" Guid="A3C91E2B-7D44-4F1A-9B6E-CompanionSslKey01" Win64="yes">
+      <Component Id="SslKeyLogSetupMarker" Guid="A3C91E2B-7D44-4F1A-9B6E-0F8C2D91E4A7" Win64="yes">
         <RegistryValue
           Root="HKCU"
           Key="Software\ranktracker\Rank Tracker Companion"
