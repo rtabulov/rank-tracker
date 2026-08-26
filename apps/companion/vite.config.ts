@@ -25,6 +25,6 @@ export default defineConfig({
   fmt: {},
   test: {
     pool: "threads",
-    environment: "jsdom",
+    environment: "node",
   },
 });

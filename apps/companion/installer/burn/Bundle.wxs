@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  WiX Burn bootstrapper stub for Rank Tracker Companion (#113).
+  Fill Payload SourceFile with the Tauri-built MSI path after `tauri build`.
+  Requires WiX Toolset v3/v4 Burn.
+-->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
+     xmlns:bal="http://schemas.microsoft.com/wix/BalExtension">
+  <Bundle
+    Name="Rank Tracker Companion"
+    Version="0.1.0"
+    Manufacturer="Rank Tracker"
+    UpgradeCode="B7E2C9A1-4F3D-4E8A-9C21-CompanionBurn001">
+    <BootstrapperApplicationRef Id="WixStandardBootstrapperApplication.RtfLicense" />
+    <Chain>
+      <!-- Machine-wide Tauri WiX MSI (companion + resources/tshark). -->
+      <MsiPackage
+        Id="CompanionMsi"
+        SourceFile="REPLACE_WITH_TAURI_MSI_PATH\Rank Tracker Companion_0.1.0_x64_en-US.msi"
+        Vital="yes"
+        DisplayInternalUI="no" />
+    </Chain>
+  </Bundle>
+</Wix>

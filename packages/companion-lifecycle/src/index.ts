@@ -15,3 +15,10 @@ export {
   trayTooltip,
   type TrayBalloon,
 } from "./tray-copy.ts";
+export {
+  NPCAP_DOWNLOAD_URL,
+  interpretNpcapProbe,
+  type NpcapProbeContext,
+  type NpcapProbeFacts,
+} from "./npcap.ts";
+export { SSLKEYLOGFILE_ENV, sslKeyLogPlan, type SslKeyLogPlan } from "./ssl-keylog-plan.ts";

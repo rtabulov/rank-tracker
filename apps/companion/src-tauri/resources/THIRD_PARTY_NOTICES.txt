@@ -1,0 +1,27 @@
+Rank Tracker Companion — third-party notices (placeholder)
+
+This file is a **beta placeholder**. Full GPL counsel and a complete source-offer
+inventory for bundled Wireshark/`tshark` components are required before **public**
+stable release. See GitHub issue #113 / parent spec #111.
+
+Bundled capture tooling (planned install-dir layout)
+----------------------------------------------------
+- `tshark` and required DLLs/data files under the companion install directory
+  (e.g. `tshark/`). Exact file list is filled when the payload is pinned.
+- Licence: Wireshark / tshark are GPL-2.0-or-later. Redistribution requires
+  corresponding source (or a written offer) and retention of copyright notices.
+  Reference: https://www.wireshark.org/about.html
+  COPYING: https://gitlab.com/wireshark/wireshark/-/blob/master/COPYING
+
+Npcap (not bundled)
+--------------------
+Npcap is **not** redistributed with this companion. Players install Npcap from
+the official site: https://npcap.com/#download
+OEM silent redistribution is out of scope for the free beta (see research doc
+`docs/research/windows-installer-sslkeylogfile-npcap-automation.md`).
+
+SSLKEYLOGFILE
+-------------
+Per-user environment variable and key-log path under
+`%LOCALAPPDATA%\RankTrackerCompanion\tls\sslkeys.log` with restrictive ACLs.
+TLS key logs are secrets; treat them accordingly.

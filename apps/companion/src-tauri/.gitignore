@@ -2,3 +2,6 @@
 # will have compiled files and executables
 /target/
 /gen/schemas
+# Pinned tshark binaries are dropped locally / in CI — do not commit.
+/resources/tshark/**
+!/resources/tshark/README.md

@@ -2,7 +2,8 @@ import { invoke, isTauri } from "@tauri-apps/api/core";
 import { Menu, MenuItem, PredefinedMenuItem } from "@tauri-apps/api/menu";
 import { TrayIcon } from "@tauri-apps/api/tray";
 import { actionLabel, trayBalloon, trayTooltip } from "companion-lifecycle";
-import { availableActionTypes, dispatchMenuId, getState, subscribe } from "./store.ts";
+import { handleSetupMenuId } from "./setup-actions.ts";
+import { availableActionTypes, getState, subscribe } from "./store.ts";
 
 /** Must match the id used in src-tauri/src/lib.rs */
 const TRAY_ID = "main";
@@ -28,7 +29,7 @@ async function buildMenu(): Promise<Menu> {
         id: actionType,
         text: actionLabel(actionType),
         action: () => {
-          dispatchMenuId(actionType);
+          void handleSetupMenuId(actionType);
         },
       }),
     );
@@ -39,7 +40,7 @@ async function buildMenu(): Promise<Menu> {
       id: "RESET",
       text: actionLabel("RESET"),
       action: () => {
-        dispatchMenuId("RESET");
+        void handleSetupMenuId("RESET");
       },
     }),
   );
@@ -49,7 +50,6 @@ async function buildMenu(): Promise<Menu> {
     await MenuItem.new({
       id: "QUIT",
       text: "Quit",
-      // Rust tray on_menu_event also handles QUIT; invoke is a fallback.
       action: () => {
         void invoke("quit");
       },
@@ -73,8 +73,6 @@ export async function initTray(): Promise<void> {
     return;
   }
 
-  // Tray icon is created in Rust (lib.rs) so Windows always gets a visible icon.
-  // JS only attaches the lifecycle menu and keeps tooltip/menu in sync.
   tray = await TrayIcon.getById(TRAY_ID);
   if (!tray) {
     throw new Error(`Tray icon "${TRAY_ID}" was not created by the Rust host`);

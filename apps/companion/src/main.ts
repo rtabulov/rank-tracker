@@ -1,6 +1,6 @@
 import { isTauri } from "@tauri-apps/api/core";
 import { bindDevPanelActions, renderDevPanel } from "./dev-panel.ts";
-import { dispatchMenuId } from "./store.ts";
+import { handleSetupMenuId } from "./setup-actions.ts";
 import { initTray } from "./tray.ts";
 
 async function bootstrap(): Promise<void> {
@@ -18,7 +18,7 @@ async function bootstrap(): Promise<void> {
 
   renderDevPanel(document.body);
   bindDevPanelActions((id) => {
-    dispatchMenuId(id);
+    void handleSetupMenuId(id);
   });
 }
 

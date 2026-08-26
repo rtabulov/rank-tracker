@@ -3,5 +3,11 @@
   "identifier": "default",
   "description": "Default companion permissions",
   "windows": ["main"],
-  "permissions": ["core:default", "core:tray:default", "core:menu:default", "allow-quit"]
+  "permissions": [
+    "core:default",
+    "core:tray:default",
+    "core:menu:default",
+    "allow-quit",
+    "allow-setup"
+  ]
 }
