@@ -35,6 +35,39 @@ async function buildMenu(): Promise<Menu> {
     );
   }
 
+  if (state.phase === "error_capture_broken") {
+    items.push(
+      await MenuItem.new({
+        id: "OPEN_KNOWN_ISSUES",
+        text: "Open releases / known issues",
+        action: () => {
+          void handleSetupMenuId("OPEN_KNOWN_ISSUES");
+        },
+      }),
+    );
+    if (state.captureDebugInfo) {
+      items.push(
+        await MenuItem.new({
+          id: "COPY_DEBUG_INFO",
+          text: "Copy debug info",
+          action: () => {
+            void handleSetupMenuId("COPY_DEBUG_INFO");
+          },
+        }),
+      );
+    }
+  }
+
+  if (state.manifestWarnings.length > 0 && state.phase === "ready") {
+    items.push(
+      await MenuItem.new({
+        id: "MANIFEST_WARNING",
+        text: state.manifestWarnings[0]!.slice(0, 64),
+        enabled: false,
+      }),
+    );
+  }
+
   items.push(
     await MenuItem.new({
       id: "RESET",

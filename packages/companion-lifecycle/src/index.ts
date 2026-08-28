@@ -36,3 +36,27 @@ export {
   type CaptureInterface,
   type CaptureObservation,
 } from "./capture-runtime.ts";
+export {
+  COMPANION_KNOWN_ISSUES_URL,
+  COMPANION_MANIFEST_URL,
+  compareSemver,
+  defaultMergedCarriers,
+  manifestTrayWarnings,
+  mergeRsCarriers,
+  parseCompanionManifest,
+  type CompanionManifest,
+  type CompanionManifestJson,
+  type KnownBroken,
+} from "./manifest.ts";
+export { bodyScanForRs, DEFAULT_RS_FIELD_ALIASES, type BodyScanResult } from "./body-scan.ts";
+export {
+  extractBestRsFromFrames,
+  type ExtractionResult,
+  type TimestampedHttpJsonFrame,
+} from "./rs-extraction.ts";
+export {
+  isQualifiedCaptureAttempt,
+  shouldReportCaptureBroken,
+  type QualifiedCaptureContext,
+} from "./break-detection.ts";
+export { buildCaptureDebugInfo, type CaptureDebugInput } from "./debug-info.ts";

@@ -1,6 +1,6 @@
 # Rank Tracker Companion (Windows)
 
-Tauri 2 tray app for THE FINALS RS capture. Spec [#111](https://github.com/rtabulov/rank-tracker/issues/111) · shell [#112](https://github.com/rtabulov/rank-tracker/issues/112) · setup [#113](https://github.com/rtabulov/rank-tracker/issues/113) · capture [#114](https://github.com/rtabulov/rank-tracker/issues/114) · bridge [#115](https://github.com/rtabulov/rank-tracker/issues/115).
+Tauri 2 tray app for THE FINALS RS capture. Spec [#111](https://github.com/rtabulov/rank-tracker/issues/111) · shell [#112](https://github.com/rtabulov/rank-tracker/issues/112) · setup [#113](https://github.com/rtabulov/rank-tracker/issues/113) · capture [#114](https://github.com/rtabulov/rank-tracker/issues/114) · bridge [#115](https://github.com/rtabulov/rank-tracker/issues/115) · manifest [#116](https://github.com/rtabulov/rank-tracker/issues/116).
 
 ## Prerequisites
 
@@ -47,6 +47,12 @@ Pure helpers: `extractRsFromHttpJson`, `autoPickInterface`, `interpretCaptureObs
 On RS capture the companion serves `http://127.0.0.1:37654` with latest-only `GET /proposal`, `POST /proposal/clear`, and `GET /health`. CORS is limited to Rank Tracker production + localhost dev. When the PWA is not connected, the companion auto-opens Rank Tracker; the PWA polls the bridge, opens **Log RS** prefilled, and clears the proposal after **Save** (dismiss without save keeps the proposal).
 
 Shared contract + injectable client: `packages/companion-bridge`.
+
+### Remote manifest + scan fallback (#116)
+
+On startup and daily, the companion fetches `https://rank.rtabulov.dev/companion-manifest.json` (`rs_carriers`, `known_broken`, `min_companion_version`). Remote carriers merge by `id` (remote wins); offline uses embedded defaults with a tray stale warning. After a qualified capture attempt (game traffic + keylog + Leagues timeout) with no carrier match, a body-scan fallback hunts alias RS fields on `*.es-dis.net` with sibling validation. Broken tier shows **capture broken / update needed**, opens releases/known-issues, and can copy sanitized debug info (no PII/tokens/raw traffic).
+
+Pure helpers: `mergeRsCarriers`, `extractBestRsFromFrames`, `bodyScanForRs`, `isQualifiedCaptureAttempt`, `buildCaptureDebugInfo` in `packages/companion-lifecycle`. Hosted manifest: `apps/website/public/companion-manifest.json`.
 
 ## Prototype reference
 

@@ -1,3 +1,6 @@
+import type { RsCarrier } from "./rs-carrier.ts";
+import { EMBEDDED_DEFAULT_CARRIER } from "./rs-carrier.ts";
+
 /** First-run ordering locked by Wayfinder #108 — Variant C only in v1. */
 export type Variant = "C";
 
@@ -19,7 +22,8 @@ export type Phase =
   | "error_interface"
   | "error_keylog"
   | "error_npcap"
-  | "error_capture";
+  | "error_capture"
+  | "error_capture_broken";
 
 export type Action =
   | { type: "ACCEPT_RISK" }
@@ -45,7 +49,14 @@ export type Action =
   | { type: "PICK_INTERFACE_OK" }
   | { type: "NEED_INTERFACE" }
   | { type: "RETRY" }
-  | { type: "RESET" };
+  | { type: "RESET" }
+  | { type: "CAPTURE_BROKEN"; debugInfo: string }
+  | {
+      type: "MANIFEST_UPDATED";
+      rsCarriers: RsCarrier[];
+      manifestStale: boolean;
+      manifestWarnings: string[];
+    };
 
 export type CompanionState = {
   variant: Variant;
@@ -59,6 +70,10 @@ export type CompanionState = {
   pwaConnected: boolean;
   autoOpenRankTracker: boolean;
   errorDetail: string | null;
+  rsCarriers: RsCarrier[];
+  manifestStale: boolean;
+  manifestWarnings: string[];
+  captureDebugInfo: string | null;
   quit: boolean;
 };
 
@@ -84,6 +99,10 @@ export function initialState(variant: Variant = "C"): CompanionState {
     pwaConnected: false,
     autoOpenRankTracker: true,
     errorDetail: null,
+    rsCarriers: [EMBEDDED_DEFAULT_CARRIER],
+    manifestStale: true,
+    manifestWarnings: [],
+    captureDebugInfo: null,
     quit: false,
   };
 }
@@ -156,6 +175,14 @@ function tryStartCapture(state: CompanionState): CompanionState {
 export function reduce(state: CompanionState, action: Action): CompanionState {
   if (action.type === "RESET") {
     return initialState(state.variant);
+  }
+  if (action.type === "MANIFEST_UPDATED") {
+    return {
+      ...state,
+      rsCarriers: action.rsCarriers,
+      manifestStale: action.manifestStale,
+      manifestWarnings: action.manifestWarnings,
+    };
   }
   if (state.quit) {
     return state;
@@ -363,6 +390,28 @@ export function reduce(state: CompanionState, action: Action): CompanionState {
         };
       }
       break;
+    case "error_capture_broken":
+      if (action.type === "RETRY") {
+        return {
+          ...state,
+          phase: "ready",
+          errorDetail: null,
+          captureDebugInfo: null,
+        };
+      }
+      if (action.type === "CAPTURE_BROKEN") {
+        return state;
+      }
+      break;
+  }
+
+  if (action.type === "CAPTURE_BROKEN") {
+    return {
+      ...state,
+      phase: "error_capture_broken",
+      errorDetail: "Capture broken / update needed",
+      captureDebugInfo: action.debugInfo,
+    };
   }
 
   return state;
@@ -404,6 +453,8 @@ export function legalActions(phase: Phase): Action["type"][] {
       return ["RETRY", "NPCAP_OPEN_DOWNLOAD"];
     case "error_keylog":
     case "error_capture":
+      return ["RETRY"];
+    case "error_capture_broken":
       return ["RETRY"];
   }
 }

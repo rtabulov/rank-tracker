@@ -3,6 +3,8 @@ identifier = "allow-setup"
 description = "Npcap detect, SSLKEYLOGFILE apply, and open download URL"
 commands.allow = [
   "open_npcap_download",
+  "open_url",
+  "copy_text_to_clipboard",
   "detect_npcap",
   "clear_npcap_reboot_marker",
   "apply_ssl_keylog",

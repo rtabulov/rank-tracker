@@ -1,12 +1,13 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import {
+  COMPANION_KNOWN_ISSUES_URL,
   NPCAP_DOWNLOAD_URL,
   interpretNpcapProbe,
   type CompanionState,
   type NpcapProbeFacts,
 } from "companion-lifecycle";
 import { handleCaptureMenuId } from "./capture-actions.ts";
-import { dispatch, dispatchMenuId } from "./store.ts";
+import { dispatch, dispatchMenuId, getState } from "./store.ts";
 
 let npcapPollTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -122,6 +123,23 @@ export async function handleSetupMenuId(id: string): Promise<CompanionState | nu
     case "ENTRY_SAVED":
       await handleCaptureMenuId(id);
       return dispatchMenuId(id);
+    case "OPEN_KNOWN_ISSUES": {
+      if (isTauri()) {
+        await invoke("open_url", { url: COMPANION_KNOWN_ISSUES_URL });
+      } else {
+        window.open(COMPANION_KNOWN_ISSUES_URL, "_blank", "noopener,noreferrer");
+      }
+      return getState();
+    }
+    case "COPY_DEBUG_INFO": {
+      const debugInfo = getState().captureDebugInfo;
+      if (debugInfo && isTauri()) {
+        await invoke("copy_text_to_clipboard", { text: debugInfo });
+      } else if (debugInfo && navigator.clipboard) {
+        await navigator.clipboard.writeText(debugInfo);
+      }
+      return getState();
+    }
     default:
       return dispatchMenuId(id);
   }

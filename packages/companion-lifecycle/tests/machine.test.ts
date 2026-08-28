@@ -119,6 +119,18 @@ describe("capture phases", () => {
     state = reduce(state, { type: "ENTRY_SAVED" });
     expect(state.phase).toBe("idle");
   });
+
+  test("qualified capture failure moves to error_capture_broken", () => {
+    let state = throughReady();
+    state = reduce(state, { type: "START_CAPTURE" });
+    state = reduce(state, { type: "GAME_DETECTED" });
+    state = reduce(state, {
+      type: "CAPTURE_BROKEN",
+      debugInfo: "companionVersion=0.1.0",
+    });
+    expect(state.phase).toBe("error_capture_broken");
+    expect(state.captureDebugInfo).toContain("0.1.0");
+  });
 });
 
 describe("tray actions", () => {

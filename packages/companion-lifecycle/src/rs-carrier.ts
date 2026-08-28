@@ -7,6 +7,8 @@ export type RsCarrier = {
   method: "POST" | "GET";
   pathContains: string;
   field: string;
+  /** Manifest-only aliases used by body-scan fallback. */
+  fieldAliases?: string[];
   /** At least one of these sibling fields must be present on the JSON object. */
   requiredSiblings: string[];
   enabled: boolean;
@@ -106,9 +108,12 @@ export function extractRsFromHttpJson(
   if (!hasAnySibling(frame.body, carrier.requiredSiblings)) {
     return { ok: false, reason: "missing_siblings" };
   }
-  const rs = readIntegerField(frame.body, carrier.field);
-  if (rs === null) {
-    return { ok: false, reason: "invalid_rank_score" };
+  const fields = [carrier.field, ...(carrier.fieldAliases ?? [])];
+  for (const field of fields) {
+    const rs = readIntegerField(frame.body, field);
+    if (rs !== null) {
+      return { ok: true, rs, carrierId: carrier.id };
+    }
   }
-  return { ok: true, rs, carrierId: carrier.id };
+  return { ok: false, reason: "invalid_rank_score" };
 }

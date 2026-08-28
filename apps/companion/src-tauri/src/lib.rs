@@ -40,6 +40,40 @@ fn open_npcap_download() -> Result<(), String> {
 }
 
 #[tauri::command]
+fn open_url(url: String) -> Result<(), String> {
+  open_url_impl(&url)
+}
+
+#[tauri::command]
+fn copy_text_to_clipboard(text: String) -> Result<(), String> {
+  #[cfg(windows)]
+  {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+    let mut child = Command::new("cmd")
+      .args(["/C", "clip"])
+      .stdin(Stdio::piped())
+      .spawn()
+      .map_err(|e| format!("clip: {e}"))?;
+    if let Some(mut stdin) = child.stdin.take() {
+      stdin
+        .write_all(text.as_bytes())
+        .map_err(|e| format!("clip stdin: {e}"))?;
+    }
+    let status = child.wait().map_err(|e| format!("clip wait: {e}"))?;
+    if !status.success() {
+      return Err(format!("clip exited with {status}"));
+    }
+    return Ok(());
+  }
+  #[cfg(not(windows))]
+  {
+    let _ = text;
+    Err("copy_text_to_clipboard is only supported on Windows".into())
+  }
+}
+
+#[tauri::command]
 fn detect_npcap() -> NpcapProbeFacts {
   let present = npcap_dll_present();
   if !present {
@@ -249,6 +283,8 @@ pub fn run() {
     .invoke_handler(tauri::generate_handler![
       quit,
       open_npcap_download,
+      open_url,
+      copy_text_to_clipboard,
       detect_npcap,
       clear_npcap_reboot_marker,
       apply_ssl_keylog,

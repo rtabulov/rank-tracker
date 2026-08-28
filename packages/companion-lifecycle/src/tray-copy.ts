@@ -1,5 +1,8 @@
 import type { CompanionState, Phase } from "./machine.ts";
 import { readyToCapture } from "./machine.ts";
+import { COMPANION_KNOWN_ISSUES_URL } from "./manifest.ts";
+
+export { COMPANION_KNOWN_ISSUES_URL };
 
 export type TrayBalloon = {
   title: string;
@@ -53,11 +56,13 @@ export function trayBalloon(state: CompanionState): TrayBalloon {
     case "ready":
       return {
         title: readyToCapture(state) ? "Ready to capture" : "Almost ready",
-        body:
+        body: manifestAwareBody(
+          state,
           state.errorDetail ??
-          (readyToCapture(state)
-            ? "Right-click → Start capture"
-            : "Finish the checklist, then Start capture."),
+            (readyToCapture(state)
+              ? "Right-click → Start capture"
+              : "Finish the checklist, then Start capture."),
+        ),
       };
     case "waiting_for_game":
       return {
@@ -71,7 +76,10 @@ export function trayBalloon(state: CompanionState): TrayBalloon {
     case "awaiting_pwa_save":
       return { title: `RS ${rs} offered`, body: "Save Entry in Rank Tracker" };
     case "idle":
-      return { title: "Idle", body: `Last RS ${rs}` };
+      return {
+        title: "Idle",
+        body: manifestAwareBody(state, `Last RS ${rs}`),
+      };
     case "error_interface":
       return { title: "Pick adapter", body: "Open status to choose interface" };
     case "error_keylog":
@@ -83,7 +91,19 @@ export function trayBalloon(state: CompanionState): TrayBalloon {
       };
     case "error_capture":
       return { title: "Something failed", body: state.errorDetail ?? "See status" };
+    case "error_capture_broken":
+      return {
+        title: "Capture broken / update needed",
+        body: `${state.errorDetail ?? "RS carrier not found after qualified attempt"}. See releases/known-issues.`,
+      };
   }
+}
+
+function manifestAwareBody(state: CompanionState, base: string): string {
+  if (state.manifestWarnings.length === 0) {
+    return base;
+  }
+  return `${base} · ${state.manifestWarnings[0]}`;
 }
 
 function setupRemainingBody(state: CompanionState): string {
@@ -122,6 +142,7 @@ export function primaryCta(state: CompanionState): string | null {
       return "Open Npcap download";
     case "error_keylog":
     case "error_capture":
+    case "error_capture_broken":
       return "Retry";
     default:
       return null;
@@ -146,6 +167,8 @@ export function trayTooltip(state: CompanionState): string {
       return `Idle — last RS ${rs}`;
     case "capturing":
       return "Capturing…";
+    case "error_capture_broken":
+      return "Capture broken — update needed";
     case "waiting_for_game":
       return "Waiting for game…";
     default:

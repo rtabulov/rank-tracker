@@ -2,13 +2,19 @@ import { invoke, isTauri } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
+  buildCaptureDebugInfo,
+  extractBestRsFromFrames,
   extractRsFromHttpJson,
   interpretCaptureObservation,
+  isQualifiedCaptureAttempt,
+  shouldReportCaptureBroken,
   type CaptureObservation,
   type CompanionState,
+  type TimestampedHttpJsonFrame,
 } from "companion-lifecycle";
 import { dispatch, getState } from "./store.ts";
 import { publishProposal } from "./bridge-actions.ts";
+import { COMPANION_VERSION } from "./manifest-actions.ts";
 import { renderInterfacePicker } from "./interface-picker.ts";
 
 const WAIT_TIMEOUT_MS = 45_000;
@@ -36,6 +42,8 @@ let unlisten: UnlistenFn | null = null;
 let waitTimer: ReturnType<typeof setTimeout> | null = null;
 let packetTimer: ReturnType<typeof setTimeout> | null = null;
 let capturing = false;
+let sawDiscoveryTraffic = false;
+let frameBuffer: TimestampedHttpJsonFrame[] = [];
 
 function clearTimers(): void {
   if (waitTimer != null) {
@@ -48,9 +56,15 @@ function clearTimers(): void {
   }
 }
 
+function resetCaptureSession(): void {
+  sawDiscoveryTraffic = false;
+  frameBuffer = [];
+}
+
 async function stopHostCapture(): Promise<void> {
   clearTimers();
   capturing = false;
+  resetCaptureSession();
   if (isTauri()) {
     try {
       await invoke("stop_capture_cmd");
@@ -67,33 +81,91 @@ function applyObservation(observation: CaptureObservation): void {
   }
 }
 
+function dispatchCaptureBroken(): void {
+  const state = getState();
+  const debugInfo = buildCaptureDebugInfo({
+    companionVersion: COMPANION_VERSION,
+    phase: state.phase,
+    manifestStale: state.manifestStale,
+    manifestWarnings: state.manifestWarnings,
+    carrierIds: state.rsCarriers.map((carrier) => carrier.id),
+    frameCount: frameBuffer.length,
+    sawDiscoveryTraffic,
+    keylogPresent: true,
+  });
+  dispatch({ type: "CAPTURE_BROKEN", debugInfo });
+}
+
+async function finishWithExtractedRs(rs: number): Promise<void> {
+  clearTimers();
+  applyObservation({ kind: "rs_extracted", rs });
+  await publishProposal(rs);
+  await stopHostCapture();
+  await hideShellWindow();
+}
+
+async function handleQualifiedCaptureTimeout(
+  phase: CompanionState["phase"],
+  keylogNonEmpty: boolean,
+): Promise<void> {
+  const qualified = isQualifiedCaptureAttempt({
+    sawDiscoveryTraffic,
+    keylogNonEmpty,
+    phaseAtTimeout: phase,
+  });
+  const extraction = extractBestRsFromFrames(frameBuffer, getState().rsCarriers, {
+    qualifiedAttempt: qualified,
+  });
+
+  if (extraction.ok) {
+    await finishWithExtractedRs(extraction.rs);
+    return;
+  }
+
+  if (shouldReportCaptureBroken(qualified, extraction)) {
+    dispatchCaptureBroken();
+    await stopHostCapture();
+    return;
+  }
+
+  if (phase === "waiting_for_game") {
+    applyObservation({ kind: "timeout_no_game" });
+  } else if (!sawDiscoveryTraffic) {
+    applyObservation({ kind: "timeout_no_packets" });
+    void showInterfacePickerIfNeeded();
+  }
+  await stopHostCapture();
+}
+
 async function onCaptureEvent(event: CaptureEvent): Promise<void> {
   switch (event.kind) {
     case "discovery_traffic": {
+      sawDiscoveryTraffic = true;
       applyObservation({ kind: "discovery_traffic" });
       if (packetTimer == null && getState().phase === "capturing") {
         packetTimer = setTimeout(() => {
-          applyObservation({ kind: "timeout_no_packets" });
-          void stopHostCapture();
-          void showInterfacePickerIfNeeded();
+          void (async () => {
+            await handleQualifiedCaptureTimeout("capturing", true);
+          })();
         }, PACKET_TIMEOUT_MS);
       }
       break;
     }
     case "http_json": {
+      sawDiscoveryTraffic = true;
       applyObservation({ kind: "discovery_traffic" });
-      const extracted = extractRsFromHttpJson({
+      const frame: TimestampedHttpJsonFrame = {
         host: event.host,
         method: event.method,
         path: event.path,
         body: event.body,
-      });
+        capturedAt: new Date().toISOString(),
+      };
+      frameBuffer.push(frame);
+
+      const extracted = extractRsFromHttpJson(frame, getState().rsCarriers);
       if (extracted.ok) {
-        clearTimers();
-        applyObservation({ kind: "rs_extracted", rs: extracted.rs });
-        await publishProposal(extracted.rs);
-        await stopHostCapture();
-        await hideShellWindow();
+        await finishWithExtractedRs(extracted.rs);
       }
       break;
     }
@@ -165,12 +237,16 @@ function armWaitTimeout(): void {
       }
       if (!keylog.nonEmpty) {
         applyObservation({ kind: "timeout_empty_keylog" });
-      } else if (phase === "waiting_for_game") {
-        applyObservation({ kind: "timeout_no_game" });
-      } else {
-        applyObservation({ kind: "timeout_no_packets" });
-        void showInterfacePickerIfNeeded();
+        await stopHostCapture();
+        return;
       }
+
+      if (phase === "capturing" || (phase === "waiting_for_game" && sawDiscoveryTraffic)) {
+        await handleQualifiedCaptureTimeout(phase, keylog.nonEmpty);
+        return;
+      }
+
+      applyObservation({ kind: "timeout_no_game" });
       await stopHostCapture();
     })();
   }, WAIT_TIMEOUT_MS);
@@ -191,6 +267,8 @@ export async function beginCapture(interfaceId?: string): Promise<CompanionState
     return next;
   }
 
+  resetCaptureSession();
+
   if (!isTauri()) {
     // Browser/dev panel: lifecycle only; real tshark is Tauri-hosted.
     return next;
@@ -206,6 +284,7 @@ export async function beginCapture(interfaceId?: string): Promise<CompanionState
   } catch (error) {
     capturing = false;
     clearTimers();
+    resetCaptureSession();
     const message = error instanceof Error ? error.message : String(error);
     if (/interface/i.test(message)) {
       dispatch({ type: "NEED_INTERFACE" });
@@ -226,8 +305,10 @@ export async function handleCaptureMenuId(id: string): Promise<CompanionState | 
     case "RETRY": {
       await stopHostCapture();
       const next = dispatch({ type: "RETRY" });
-      if (next.phase === "error_interface") {
-        await showInterfacePickerIfNeeded();
+      if (next.phase === "error_interface" || next.phase === "error_capture_broken") {
+        if (next.phase === "error_interface") {
+          await showInterfacePickerIfNeeded();
+        }
       }
       return next;
     }

@@ -1,0 +1,17 @@
+{
+  "rs_carriers": [
+    {
+      "id": "league-rank-v1",
+      "priority": 10,
+      "host_pattern": "*.es-dis.net",
+      "method": "POST",
+      "path_contains": "/v1/discovery/leagues/league-rank",
+      "field": "rankScore",
+      "field_aliases": ["rankPoints", "RankScore"],
+      "required_siblings": ["leagueRankIndex", "highestLeagueRankIndex"],
+      "enabled": true
+    }
+  ],
+  "known_broken": null,
+  "min_companion_version": "0.1.0"
+}
