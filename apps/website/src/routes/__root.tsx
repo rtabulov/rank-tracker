@@ -116,6 +116,10 @@ function AppShell() {
               Source
             </a>
             <span aria-hidden="true">·</span>
+            <a href="/companion" className="hover:text-foreground">
+              Companion (beta)
+            </a>
+            <span aria-hidden="true">·</span>
             <a
               href="https://github.com/rtabulov/rank-tracker/issues/new/choose"
               target="_blank"

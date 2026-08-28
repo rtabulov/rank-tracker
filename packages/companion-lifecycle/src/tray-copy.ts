@@ -1,6 +1,6 @@
 import type { CompanionState, Phase } from "./machine.ts";
 import { readyToCapture } from "./machine.ts";
-import { COMPANION_KNOWN_ISSUES_URL } from "./manifest.ts";
+import { COMPANION_KNOWN_ISSUES_URL } from "./release.ts";
 
 export { COMPANION_KNOWN_ISSUES_URL };
 

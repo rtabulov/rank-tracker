@@ -385,6 +385,9 @@ importers:
       companion-bridge:
         specifier: workspace:*
         version: link:../../packages/companion-bridge
+      companion-lifecycle:
+        specifier: workspace:*
+        version: link:../../packages/companion-lifecycle
       lucide-react:
         specifier: 'catalog:'
         version: 1.24.0(react@19.2.7)

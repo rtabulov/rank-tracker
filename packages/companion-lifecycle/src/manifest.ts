@@ -1,7 +1,6 @@
 import { EMBEDDED_DEFAULT_CARRIER, type RsCarrier } from "./rs-carrier.ts";
 
 export const COMPANION_MANIFEST_URL = "https://rank.rtabulov.dev/companion-manifest.json";
-export const COMPANION_KNOWN_ISSUES_URL = "https://github.com/rtabulov/rank-tracker/releases";
 
 export type KnownBroken = {
   gamePatch: string;

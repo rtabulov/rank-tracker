@@ -1,6 +1,6 @@
 # Rank Tracker Companion (Windows)
 
-Tauri 2 tray app for THE FINALS RS capture. Spec [#111](https://github.com/rtabulov/rank-tracker/issues/111) · shell [#112](https://github.com/rtabulov/rank-tracker/issues/112) · setup [#113](https://github.com/rtabulov/rank-tracker/issues/113) · capture [#114](https://github.com/rtabulov/rank-tracker/issues/114) · bridge [#115](https://github.com/rtabulov/rank-tracker/issues/115) · manifest [#116](https://github.com/rtabulov/rank-tracker/issues/116).
+Tauri 2 tray app for THE FINALS RS capture. Spec [#111](https://github.com/rtabulov/rank-tracker/issues/111) · shell [#112](https://github.com/rtabulov/rank-tracker/issues/112) · setup [#113](https://github.com/rtabulov/rank-tracker/issues/113) · capture [#114](https://github.com/rtabulov/rank-tracker/issues/114) · bridge [#115](https://github.com/rtabulov/rank-tracker/issues/115) · manifest [#116](https://github.com/rtabulov/rank-tracker/issues/116) · release [#117](https://github.com/rtabulov/rank-tracker/issues/117).
 
 ## Prerequisites
 
@@ -50,9 +50,16 @@ Shared contract + injectable client: `packages/companion-bridge`.
 
 ### Remote manifest + scan fallback (#116)
 
-On startup and daily, the companion fetches `https://rank.rtabulov.dev/companion-manifest.json` (`rs_carriers`, `known_broken`, `min_companion_version`). Remote carriers merge by `id` (remote wins); offline uses embedded defaults with a tray stale warning. After a qualified capture attempt (game traffic + keylog + Leagues timeout) with no carrier match, a body-scan fallback hunts alias RS fields on `*.es-dis.net` with sibling validation. Broken tier shows **capture broken / update needed**, opens releases/known-issues, and can copy sanitized debug info (no PII/tokens/raw traffic).
+On startup and daily, the companion fetches `https://rank.rtabulov.dev/companion-manifest.json` (`rs_carriers`, `known_broken`, `min_companion_version`). Remote carriers merge by `id` (remote wins); offline uses embedded defaults with a tray stale warning. After a qualified capture attempt (game traffic + keylog + Leagues timeout) with no carrier match, a body-scan fallback hunts alias RS fields on `*.es-dis.net` with sibling validation. Broken tier shows **capture broken / update needed**, opens [known issues](https://rank.rtabulov.dev/companion#known-issues), and can copy sanitized debug info (no PII/tokens/raw traffic).
 
 Pure helpers: `mergeRsCarriers`, `extractBestRsFromFrames`, `bodyScanForRs`, `isQualifiedCaptureAttempt`, `buildCaptureDebugInfo` in `packages/companion-lifecycle`. Hosted manifest: `apps/website/public/companion-manifest.json`.
+
+### Private beta release (#117)
+
+- **Download page:** https://rank.rtabulov.dev/companion (latest GitHub pre-release MSI + beta disclaimers).
+- **CI:** `.github/workflows/companion-release.yml` — `workflow_dispatch` builds MSI; tag `companion-v*` publishes a GitHub **pre-release**.
+- **Docs:** `docs/companion/release.md`, `known-issues.md`, `smoke-test-checklist.md`.
+- **Public stable:** out of scope until GPL counsel + Authenticode signing (documented, not shipped).
 
 ## Prototype reference
 
