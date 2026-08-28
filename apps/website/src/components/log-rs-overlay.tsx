@@ -15,11 +15,18 @@ import type { Entry } from "@/lib/types";
 type LogRsOverlayProps = {
   open: boolean;
   seasonNumber: number;
+  prefillRs?: number;
   onClose: () => void;
-  onSaved: (entry: Entry) => void;
+  onSaved: (entry: Entry) => void | Promise<void>;
 };
 
-export function LogRsOverlay({ open, seasonNumber, onClose, onSaved }: LogRsOverlayProps) {
+export function LogRsOverlay({
+  open,
+  seasonNumber,
+  prefillRs,
+  onClose,
+  onSaved,
+}: LogRsOverlayProps) {
   const currentSeasonNumber = getCurrentSeason().number;
   const rsInputRef = useRef<HTMLInputElement>(null);
 
@@ -42,7 +49,7 @@ export function LogRsOverlay({ open, seasonNumber, onClose, onSaved }: LogRsOver
         rs: Number(value.rs),
         recordedAt,
       });
-      onSaved(entry);
+      await Promise.resolve(onSaved(entry));
       onClose();
     },
   });
@@ -53,10 +60,10 @@ export function LogRsOverlay({ open, seasonNumber, onClose, onSaved }: LogRsOver
     }
 
     form.reset({
-      rs: "",
+      rs: prefillRs != null ? String(prefillRs) : "",
       recordedAtLocal: toDatetimeLocalValue(new Date()),
     });
-  }, [form, open]);
+  }, [form, open, prefillRs]);
 
   return (
     <ViewportOverlay

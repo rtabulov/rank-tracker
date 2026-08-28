@@ -1,0 +1,9 @@
+[[permission]]
+identifier = "allow-bridge"
+description = "Loopback HTTP bridge for Rank Tracker PWA prefill"
+commands.allow = [
+  "start_bridge_cmd",
+  "set_proposal_cmd",
+  "clear_proposal_cmd",
+  "sync_bridge_phase_cmd",
+]

@@ -22,6 +22,7 @@
     "@tanstack/react-start": "catalog:",
     "class-variance-authority": "catalog:",
     "clsx": "catalog:",
+    "companion-bridge": "workspace:*",
     "lucide-react": "catalog:",
     "nanoid": "catalog:",
     "radix-ui": "catalog:",

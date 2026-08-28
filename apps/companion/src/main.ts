@@ -1,4 +1,5 @@
 import { isTauri } from "@tauri-apps/api/core";
+import { initBridge } from "./bridge-actions.ts";
 import { bindDevPanelActions, renderDevPanel } from "./dev-panel.ts";
 import { handleSetupMenuId } from "./setup-actions.ts";
 import { initTray } from "./tray.ts";
@@ -6,6 +7,7 @@ import { initTray } from "./tray.ts";
 async function bootstrap(): Promise<void> {
   if (isTauri()) {
     try {
+      await initBridge();
       await initTray();
       // Hidden shell window — UI is the system tray only.
       document.body.innerHTML = "";

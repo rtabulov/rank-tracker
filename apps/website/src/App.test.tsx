@@ -7,6 +7,7 @@ import { createMemoryAuthClient } from "./lib/auth";
 import { createMemoryCloudEntriesClient } from "./lib/cloud-entries";
 import { createMemoryProfileClient, type ProfileClient } from "./lib/profile";
 import { createMemoryPublicSeasonClient, type PublicSeasonClient } from "./lib/public-season";
+import { createMemoryCompanionProposalClient } from "companion-bridge";
 import { createMemoryStorageAdapter, LOCAL_STORE_KEY } from "./lib/local-store";
 import { APP_SCHEMA_VERSION } from "./lib/schema";
 import { SYNC_STATE_KEY } from "./lib/sync-state";
@@ -393,6 +394,81 @@ test("saving Log RS persists Entry and shows populated Current Season view", asy
   expect(store.entries[0]?.recordedAt).toMatch(/^2026-07-16T/);
   expect(store.entries[0]?.updatedAt).toMatch(/^2026-07-17T12:00:00/);
   vi.useRealTimers();
+});
+
+test("companion proposal opens Log RS prefilled with captured RS", async () => {
+  const history = createMemoryHistory({ initialEntries: ["/"] });
+  const router = createAppRouter({ history });
+  const companionProposalClient = createMemoryCompanionProposalClient({
+    proposal: { rs: 25_644, capturedAt: "2026-07-17T12:00:00.000Z" },
+  });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={createMemoryStorageAdapter()}
+      companionProposalClient={companionProposalClient}
+    />,
+  );
+
+  expect(await screen.findByRole("dialog", { name: "Log RS" })).toBeInTheDocument();
+  expect(screen.getByLabelText(/^rs$/i)).toHaveValue("25644");
+});
+
+test("saving companion-prefilled Log RS clears the proposal", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-07-17T12:00:00.000Z"));
+  const user = userEvent.setup();
+  const storageAdapter = createMemoryStorageAdapter();
+  const history = createMemoryHistory({ initialEntries: ["/"] });
+  const router = createAppRouter({ history });
+  const companionProposalClient = createMemoryCompanionProposalClient({
+    proposal: { rs: 25_644, capturedAt: "2026-07-17T12:00:00.000Z" },
+  });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={storageAdapter}
+      companionProposalClient={companionProposalClient}
+    />,
+  );
+
+  expect(await screen.findByRole("dialog", { name: "Log RS" })).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Save" }));
+
+  expect(await screen.findByLabelText("Season hero")).toHaveTextContent("25,644");
+  await expect(companionProposalClient.getProposal()).resolves.toBeNull();
+  vi.useRealTimers();
+});
+
+test("dismissing companion-prefilled Log RS without Save keeps the proposal", async () => {
+  const user = userEvent.setup();
+  const storageAdapter = createMemoryStorageAdapter();
+  const history = createMemoryHistory({ initialEntries: ["/"] });
+  const router = createAppRouter({ history });
+  const companionProposalClient = createMemoryCompanionProposalClient({
+    proposal: { rs: 25_644, capturedAt: "2026-07-17T12:00:00.000Z" },
+  });
+
+  render(
+    <App
+      router={router}
+      storageAdapter={storageAdapter}
+      companionProposalClient={companionProposalClient}
+    />,
+  );
+
+  expect(await screen.findByRole("dialog", { name: "Log RS" })).toBeInTheDocument();
+  await user.keyboard("{Escape}");
+  expect(screen.queryByRole("dialog", { name: "Log RS" })).not.toBeInTheDocument();
+  await expect(companionProposalClient.getProposal()).resolves.toEqual({
+    rs: 25_644,
+    capturedAt: "2026-07-17T12:00:00.000Z",
+  });
+  const raw = storageAdapter.getItem(LOCAL_STORE_KEY);
+  const store = raw === null ? { entries: [] } : (JSON.parse(raw) as { entries: unknown[] });
+  expect(store.entries).toHaveLength(0);
 });
 
 test("populated Current Season with one Entry omits sparse summary metrics", async () => {

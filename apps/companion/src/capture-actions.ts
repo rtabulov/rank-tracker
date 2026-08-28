@@ -8,6 +8,7 @@ import {
   type CompanionState,
 } from "companion-lifecycle";
 import { dispatch, getState } from "./store.ts";
+import { publishProposal } from "./bridge-actions.ts";
 import { renderInterfacePicker } from "./interface-picker.ts";
 
 const WAIT_TIMEOUT_MS = 45_000;
@@ -90,6 +91,7 @@ async function onCaptureEvent(event: CaptureEvent): Promise<void> {
       if (extracted.ok) {
         clearTimers();
         applyObservation({ kind: "rs_extracted", rs: extracted.rs });
+        await publishProposal(extracted.rs);
         await stopHostCapture();
         await hideShellWindow();
       }

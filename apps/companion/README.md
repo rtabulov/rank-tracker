@@ -1,6 +1,6 @@
 # Rank Tracker Companion (Windows)
 
-Tauri 2 tray app for THE FINALS RS capture. Spec [#111](https://github.com/rtabulov/rank-tracker/issues/111) · shell [#112](https://github.com/rtabulov/rank-tracker/issues/112) · setup [#113](https://github.com/rtabulov/rank-tracker/issues/113) · capture [#114](https://github.com/rtabulov/rank-tracker/issues/114).
+Tauri 2 tray app for THE FINALS RS capture. Spec [#111](https://github.com/rtabulov/rank-tracker/issues/111) · shell [#112](https://github.com/rtabulov/rank-tracker/issues/112) · setup [#113](https://github.com/rtabulov/rank-tracker/issues/113) · capture [#114](https://github.com/rtabulov/rank-tracker/issues/114) · bridge [#115](https://github.com/rtabulov/rank-tracker/issues/115).
 
 ## Prerequisites
 
@@ -41,6 +41,12 @@ If auto-pick fails, a compact adapter picker opens in the shell window.
 Pure helpers: `extractRsFromHttpJson`, `autoPickInterface`, `interpretCaptureObservation` in `packages/companion-lifecycle`. Fixture: `docs/research/fixtures/live-tls-rs/v1-discovery-leagues-league-rank.json`.
 
 **Maintainer smoke (not CI):** with THE FINALS online, open Career → Leagues; captured RS should match on-screen Leagues RS.
+
+### Localhost bridge + PWA prefill (#115)
+
+On RS capture the companion serves `http://127.0.0.1:37654` with latest-only `GET /proposal`, `POST /proposal/clear`, and `GET /health`. CORS is limited to Rank Tracker production + localhost dev. When the PWA is not connected, the companion auto-opens Rank Tracker; the PWA polls the bridge, opens **Log RS** prefilled, and clears the proposal after **Save** (dismiss without save keeps the proposal).
+
+Shared contract + injectable client: `packages/companion-bridge`.
 
 ## Prototype reference
 

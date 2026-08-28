@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
+import { useOptionalCompanionProposalClient } from "@/components/companion-proposal-provider";
 import { useOptionalLocalStore } from "@/components/local-store-provider";
 import { DeleteEntryOverlay } from "@/components/delete-entry-overlay";
 import { EditEntryOverlay } from "@/components/edit-entry-overlay";
@@ -20,6 +21,7 @@ import {
   getSeasonForTimestamp,
 } from "@/lib/seasons";
 import { cn } from "@/lib/utils";
+import { useCompanionProposalPrefill } from "@/hooks/use-companion-proposal-prefill";
 
 type SeasonViewProps = {
   seasonNumber: number;
@@ -48,6 +50,11 @@ export function SeasonView({
     throw new Error("SeasonView requires LocalStoreProvider when not read-only");
   }
   const [logRsOpen, setLogRsOpen] = useState(false);
+  const companionClient = useOptionalCompanionProposalClient();
+  const { prefillRs, onProposalDismissed, onProposalSaved } = useCompanionProposalPrefill(
+    companionClient,
+    !readOnly,
+  );
   const [editingEntry, setEditingEntry] = useState<Entry | null>(null);
   const [deletingEntry, setDeletingEntry] = useState<Entry | null>(null);
   const entries = entriesProp ?? localStore!.store.entries;
@@ -59,6 +66,12 @@ export function SeasonView({
   const summary = computeSeasonSummary(seasonEntries, { isCurrentSeason });
   const navigableSeasons = navigableSeasonsProp ?? getNavigableSeasons(entries);
   const timeline = [...seasonEntries].reverse();
+
+  useEffect(() => {
+    if (prefillRs !== undefined) {
+      setLogRsOpen(true);
+    }
+  }, [prefillRs]);
 
   return (
     <main className="mx-auto flex w-full max-w-lg flex-1 flex-col px-4 pb-4 pt-5">
@@ -250,8 +263,12 @@ export function SeasonView({
           <LogRsOverlay
             open={logRsOpen}
             seasonNumber={season.number}
-            onClose={() => setLogRsOpen(false)}
-            onSaved={(entry) => {
+            prefillRs={prefillRs}
+            onClose={() => {
+              onProposalDismissed();
+              setLogRsOpen(false);
+            }}
+            onSaved={async (entry) => {
               localStore!.setStore({
                 ...localStore!.store,
                 entries: addEntry(localStore!.store.entries, entry),
@@ -260,6 +277,7 @@ export function SeasonView({
               if (targetSeason !== null && targetSeason.number !== season.number) {
                 onSeasonSelect(targetSeason.number);
               }
+              await onProposalSaved();
             }}
           />
 

@@ -1,3 +1,4 @@
+mod bridge;
 mod capture;
 
 use serde::Serialize;
@@ -27,6 +28,9 @@ struct NpcapProbeFacts {
 #[tauri::command]
 fn quit(app: AppHandle, host: tauri::State<'_, capture::CaptureHost>) {
   capture::stop_capture(&app, &host);
+  if let Some(bridge) = app.try_state::<bridge::BridgeHost>() {
+    bridge.stop();
+  }
   app.exit(0);
 }
 
@@ -241,6 +245,7 @@ fn tighten_keylog_acl(dir: &Path) -> Result<(), String> {
 pub fn run() {
   tauri::Builder::default()
     .manage(capture::CaptureHost::new())
+    .manage(bridge::BridgeHost::new("0.1.0".into()))
     .invoke_handler(tauri::generate_handler![
       quit,
       open_npcap_download,
@@ -252,6 +257,10 @@ pub fn run() {
       capture::stop_capture_cmd,
       capture::save_capture_interface,
       capture::probe_keylog_status,
+      bridge::start_bridge_cmd,
+      bridge::set_proposal_cmd,
+      bridge::clear_proposal_cmd,
+      bridge::sync_bridge_phase_cmd,
     ])
     .on_window_event(|window, event| {
       if let WindowEvent::CloseRequested { api, .. } = event {
@@ -288,6 +297,9 @@ pub fn run() {
           if event.id().as_ref() == "QUIT" {
             if let Some(host) = app.try_state::<capture::CaptureHost>() {
               capture::stop_capture(app, &host);
+            }
+            if let Some(bridge) = app.try_state::<bridge::BridgeHost>() {
+              bridge.stop();
             }
             app.exit(0);
           }

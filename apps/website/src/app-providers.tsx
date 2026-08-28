@@ -2,6 +2,10 @@ import { useState, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/components/auth-provider";
 import { CloudSyncProvider } from "@/components/cloud-sync-provider";
+import {
+  CompanionProposalProvider,
+  createDefaultCompanionProposalClient,
+} from "@/components/companion-proposal-provider";
 import { LocalStoreProvider } from "@/components/local-store-provider";
 import { ProfileProvider } from "@/components/profile-provider";
 import { PublicSeasonProvider } from "@/components/public-season-provider";
@@ -22,6 +26,7 @@ import {
   type ProfileClient,
 } from "@/lib/profile";
 import type { StorageAdapter, UnmigratedLocalStore } from "@/lib/types";
+import type { CompanionProposalClient } from "companion-bridge";
 
 function createDefaultAuthClient(): AuthClient {
   if (import.meta.env.MODE === "test") {
@@ -59,6 +64,7 @@ export type AppProvidersProps = {
   profileClient?: ProfileClient;
   entriesClient?: CloudEntriesClient;
   publicSeasonClient?: PublicSeasonClient;
+  companionProposalClient?: CompanionProposalClient;
 };
 
 export function AppProviders({
@@ -69,6 +75,7 @@ export function AppProviders({
   profileClient,
   entriesClient,
   publicSeasonClient,
+  companionProposalClient,
 }: AppProvidersProps) {
   const [queryClient] = useState(() => new QueryClient());
   const [resolvedAuthClient] = useState(() => authClient ?? createDefaultAuthClient());
@@ -79,6 +86,9 @@ export function AppProviders({
   const [resolvedPublicSeasonClient] = useState(
     () => publicSeasonClient ?? createDefaultPublicSeasonClient(),
   );
+  const [resolvedCompanionProposalClient] = useState(
+    () => companionProposalClient ?? createDefaultCompanionProposalClient(),
+  );
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -87,7 +97,11 @@ export function AppProviders({
           <LocalStoreProvider storageAdapter={storageAdapter} initialStore={initialStore}>
             <CloudSyncProvider entriesClient={resolvedEntriesClient}>
               <PublicSeasonProvider publicSeasonClient={resolvedPublicSeasonClient}>
-                {children}
+                <CompanionProposalProvider
+                  companionProposalClient={resolvedCompanionProposalClient}
+                >
+                  {children}
+                </CompanionProposalProvider>
               </PublicSeasonProvider>
             </CloudSyncProvider>
           </LocalStoreProvider>

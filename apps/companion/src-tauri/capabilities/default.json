@@ -11,6 +11,7 @@
     "core:window:default",
     "allow-quit",
     "allow-setup",
-    "allow-capture"
+    "allow-capture",
+    "allow-bridge"
   ]
 }
